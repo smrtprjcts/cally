@@ -143,11 +143,24 @@
 
     <!-- Legal disclaimer (first-run sheet + Settings re-read) -->
     <string name="legal_title">Перш ніж записувати</string>
-    <string name="legal_intro">Кілька важливих речей про юридичний контекст. Це не юридична консультація — переконайся, що твоя ситуація вкладається.</string>
-    <string name="legal_bullet_ua">В Україні запис власних телефонних розмов учасником цієї ж розмови — легальний без сповіщення співрозмовника (one-party consent).</string>
-    <string name="legal_bullet_other">У Німеччині (§ 201 StGB), ~11 штатах США (Каліфорнія, Іллінойс тощо) і частині EU — потрібна згода всіх учасників, навіть для особистого архіву. Перевір локальний закон.</string>
-    <string name="legal_bullet_no_beep">cally технічно не може програти попередження співрозмовнику — це системна функція Pixel Phone, недоступна third-party додаткам. Якщо твоя юрисдикція вимагає сповіщення — попередь усно на старті розмови.</string>
-    <string name="legal_bullet_share">Запис ≠ розповсюдження. За публікацію без згоди співрозмовника відповідає користувач.</string>
+    <string name="legal_intro">Юрисдикції розкладаються на три рівні. Знайди свою — і дій відповідно. Це не юридична консультація.</string>
+
+    <string name="legal_tier1_title">1. Без сповіщення (one-party consent)</string>
+    <string name="legal_tier1_summary">Україна, UK, federal США + ~38 штатів, Канада, Австралія, Польща.</string>
+    <string name="legal_tier1_body">Учасник розмови може записувати без попередження співрозмовника. Власна згода = достатня згода. Підстави: federal Wiretap Act 18 U.S.C. § 2511 у США, RIPA 2000 у UK, Criminal Code § 184(2)(a) у Канаді.</string>
+
+    <string name="legal_tier2_title">2. Достатньо попередити (all-party + implied consent)</string>
+    <string name="legal_tier2_summary">~11 штатів США: Каліфорнія, Іллінойс, Флорида, Меріленд та інші.</string>
+    <string name="legal_tier2_body">Повний список: CA (Penal Code § 632), FL, IL, MD, MA, MT, NV, NH, PA, WA, CT. Сповісти співрозмовника на старті розмови — якщо він почув і продовжив, це implied consent, запис легальний. Доктрина закріплена прецедентним правом за десятки років. Той самий механізм у комерційних hotline-disclaimer\'ах EU.</string>
+
+    <string name="legal_tier3_title">3. Заборонено навіть з попередженням (explicit consent)</string>
+    <string name="legal_tier3_summary">Німеччина, Австрія, Бельгія. Потрібна явна згода — попередження юридично недостатньо.</string>
+    <string name="legal_tier3_body">Німеччина — § 201 StGB Vertraulichkeit des Wortes, до 3 років в\'язниці за запис «непублічно мовленого слова» без явного дозволу. Implied consent у приватних розмовах німецькі суди не визнають. Австрія — § 120 StGB. Бельгія — кримінальне право + електронні комунікації, у багатьох випадках письмова згода. Не використовуй cally в цих юрисдикціях без явного «так, згоден» від співрозмовника.</string>
+
+    <string name="legal_tech_title">cally і beep співрозмовнику</string>
+    <string name="legal_tech_body">Технічно не можемо програти beep чи announcement у вухо співрозмовнику — це системна привілея Pixel Phone, недоступна third-party додаткам. Усне попередження на старті розмови працює у режимі 2 (implied consent). У режимі 3 і його недостатньо — потрібна явна згода.</string>
+
+    <string name="legal_share">Запис ≠ розповсюдження. За публікацію без згоди співрозмовника відповідає користувач — навіть у one-party юрисдикціях.</string>
     <string name="legal_footer">Деталі та джерела — у README проєкту.</string>
     <string name="legal_action_accept">Зрозуміло, продовжити</string>
     <string name="legal_action_close">Закрити</string>
