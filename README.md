@@ -4,10 +4,10 @@
 Android-пристроях, **без root і без розблокованого bootloader**, через Shizuku.
 
 <p align="center">
-  <img src="docs/screenshots/01-home.jpg" width="220" alt="Список дзвінків">
-  <img src="docs/screenshots/02-playback.jpg" width="220" alt="Плеєр">
-  <img src="docs/screenshots/03-transcript.jpg" width="220" alt="Транскрипт">
-  <img src="docs/screenshots/04-settings.jpg" width="220" alt="Налаштування">
+  <img src="docs/screenshots/01-home.jpg" width="180" alt="Список дзвінків">
+  <img src="docs/screenshots/02-playback.jpg" width="180" alt="Плеєр">
+  <img src="docs/screenshots/03-transcript.jpg" width="180" alt="Транскрипт">
+  <img src="docs/screenshots/04-settings.jpg" width="180" alt="Налаштування">
 </p>
 
 > **Status: MVP scaffold (v0.1.0).** Усе ядро — AIDL-міст, Shizuku
