@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.lyo.callrec.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -19,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Card
@@ -37,8 +39,10 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.OutlinedTextField
@@ -51,6 +55,7 @@ import dev.lyo.callrec.R
 import dev.lyo.callrec.di.AppContainer
 import dev.lyo.callrec.settings.RecordingFormat
 import dev.lyo.callrec.ui.components.strategyQuality
+import dev.lyo.callrec.ui.legal.LegalDisclaimerSheet
 import kotlinx.coroutines.launch
 
 @Composable
@@ -76,6 +81,7 @@ fun SettingsScreen(
     val capabilities by container.capabilities.flow.collectAsState(initial = null)
     val snackbar = remember { SnackbarHostState() }
     val cleanupAppliedMsg = stringResource(R.string.settings_cleanup_applied)
+    var showLegalSheet by remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier
@@ -273,6 +279,12 @@ fun SettingsScreen(
                         value = ctx.getExternalFilesDir(null)?.resolve("recordings")?.absolutePath
                             ?: ctx.filesDir.resolve("recordings").absolutePath,
                     )
+                    Divider()
+                    LinkRow(
+                        title = stringResource(R.string.settings_legal_title),
+                        subtitle = stringResource(R.string.settings_legal_subtitle),
+                        onClick = { showLegalSheet = true },
+                    )
                 }
 
                 Spacer(Modifier.height(40.dp))
@@ -285,6 +297,14 @@ fun SettingsScreen(
                 .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(16.dp),
         )
+
+        if (showLegalSheet) {
+            LegalDisclaimerSheet(
+                requireAck = false,
+                onAccept = { showLegalSheet = false },
+                onDismiss = { showLegalSheet = false },
+            )
+        }
     }
 }
 
@@ -416,6 +436,40 @@ private fun FormatRow(
                 ) { Text(label) }
             }
         }
+    }
+}
+
+@Composable
+private fun LinkRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Icon(
+            Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Додано
+- First-run legal disclaimer (ModalBottomSheet) — короткий огляд one-party / all-party consent юрисдикцій, обмеження приватності та технічна неможливість beep-сповіщення співрозмовника. Блокується від back-press / swipe-dismiss до явного "Зрозуміло, продовжити".
+- Settings → Про додаток → "Юридичне попередження" — повторне відкриття того самого sheet'а як read-only.
+- Версійований DataStore-флаг `disclaimer_accepted_v1` для майбутнього re-prompt при істотних змінах тексту.
+
 ### Заплановано
 - SAF integration (`OpenDocumentTree` + MediaStore mirror)
 - Англомовна локаль (`values-en/strings.xml`)

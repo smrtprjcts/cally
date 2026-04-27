@@ -6,10 +6,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,10 +25,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.platform.LocalContext
 import dev.lyo.callrec.di.AppContainer
 import dev.lyo.callrec.permissions.SetupStatus
+import dev.lyo.callrec.ui.legal.LegalDisclaimerSheet
 import dev.lyo.callrec.ui.onboarding.OnboardingScreen
 import dev.lyo.callrec.ui.playback.PlaybackScreen
 import dev.lyo.callrec.ui.primary.PrimaryScreen
 import dev.lyo.callrec.ui.settings.SettingsScreen
+import kotlinx.coroutines.launch
 
 /**
  * Routing destinations. The string IDs are stable across app upgrades — the
@@ -56,6 +62,14 @@ fun CallrecApp(
     val shizukuState by container.shizuku.state.collectAsStateWithLifecycle()
     val start = if (startWithOnboarding) Routes.Onboarding else Routes.Home
 
+    // First-run legal placeholder. We default to `true` to avoid a flash of
+    // the sheet for returning users while DataStore is loading. The flag is
+    // versioned (`disclaimer_accepted_v1`), so a future material text change
+    // can be re-published by bumping to `_v2`.
+    val disclaimerAccepted by container.settings.disclaimerAccepted
+        .collectAsStateWithLifecycle(initialValue = true)
+    val disclaimerScope = rememberCoroutineScope()
+
     // On every Activity RESUME re-check setup. If any prerequisite fell off
     // (Shizuku service died, overlay permission revoked, battery exemption
     // revoked, etc) — bounce them back to Onboarding so they understand WHY
@@ -80,6 +94,7 @@ fun CallrecApp(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     NavHost(
         navController = nav,
         startDestination = start,
@@ -129,5 +144,18 @@ fun CallrecApp(
                 onBack = { nav.popBackStack() },
             )
         }
+    }
+
+    if (!disclaimerAccepted) {
+        LegalDisclaimerSheet(
+            requireAck = true,
+            onAccept = {
+                disclaimerScope.launch {
+                    container.settings.setDisclaimerAccepted(true)
+                }
+            },
+            onDismiss = { /* unused while requireAck = true */ },
+        )
+    }
     }
 }

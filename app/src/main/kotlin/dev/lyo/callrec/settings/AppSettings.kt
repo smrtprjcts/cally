@@ -31,6 +31,12 @@ class AppSettings(private val store: DataStore<Preferences>) {
     val onboardingDone: Flow<Boolean> = store.data.map { it[KEY_ONBOARDING_DONE] ?: false }
     suspend fun setOnboardingDone(v: Boolean) = store.edit { it[KEY_ONBOARDING_DONE] = v }
 
+    // Versioned key (`_v1`) so a future material change to the disclaimer text
+    // can be republished by bumping to `_v2` — all users see the refreshed
+    // sheet again without a one-shot migration.
+    val disclaimerAccepted: Flow<Boolean> = store.data.map { it[KEY_DISCLAIMER_ACCEPTED] ?: false }
+    suspend fun setDisclaimerAccepted(v: Boolean) = store.edit { it[KEY_DISCLAIMER_ACCEPTED] = v }
+
     val recordIncludingRingback: Flow<Boolean> = store.data.map { it[KEY_RING_INCLUDED] ?: true }
     suspend fun setRecordIncludingRingback(v: Boolean) = store.edit { it[KEY_RING_INCLUDED] = v }
 
@@ -94,6 +100,7 @@ class AppSettings(private val store: DataStore<Preferences>) {
         val SAMPLE_RATE = intPreferencesKey("sample_rate")
         val AUTO_RECORD = booleanPreferencesKey("auto_record")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        val DISCLAIMER_ACCEPTED = booleanPreferencesKey("disclaimer_accepted_v1")
         val RING_INCLUDED = booleanPreferencesKey("ring_included")
         val FORMAT = stringPreferencesKey("recording_format")
         val STT_BASE_URL = stringPreferencesKey("stt_base_url")
@@ -106,6 +113,7 @@ class AppSettings(private val store: DataStore<Preferences>) {
     private val KEY_SAMPLE_RATE get() = Keys.SAMPLE_RATE
     private val KEY_AUTO_RECORD get() = Keys.AUTO_RECORD
     private val KEY_ONBOARDING_DONE get() = Keys.ONBOARDING_DONE
+    private val KEY_DISCLAIMER_ACCEPTED get() = Keys.DISCLAIMER_ACCEPTED
     private val KEY_RING_INCLUDED get() = Keys.RING_INCLUDED
     private val KEY_FORMAT get() = Keys.FORMAT
     private val KEY_STT_BASE_URL get() = Keys.STT_BASE_URL

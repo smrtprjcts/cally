@@ -138,6 +138,19 @@
     <string name="settings_section_about">Про додаток</string>
     <string name="settings_version">Версія</string>
     <string name="settings_storage_path">Папка записів</string>
+    <string name="settings_legal_title">Юридичне попередження</string>
+    <string name="settings_legal_subtitle">Огляд правил для запису розмов</string>
+
+    <!-- Legal disclaimer (first-run sheet + Settings re-read) -->
+    <string name="legal_title">Перш ніж записувати</string>
+    <string name="legal_intro">Кілька важливих речей про юридичний контекст. Це не юридична консультація — переконайся, що твоя ситуація вкладається.</string>
+    <string name="legal_bullet_ua">В Україні запис власних телефонних розмов учасником цієї ж розмови — легальний без сповіщення співрозмовника (one-party consent).</string>
+    <string name="legal_bullet_other">У Німеччині (§ 201 StGB), ~11 штатах США (Каліфорнія, Іллінойс тощо) і частині EU — потрібна згода всіх учасників, навіть для особистого архіву. Перевір локальний закон.</string>
+    <string name="legal_bullet_no_beep">cally технічно не може програти попередження співрозмовнику — це системна функція Pixel Phone, недоступна third-party додаткам. Якщо твоя юрисдикція вимагає сповіщення — попередь усно на старті розмови.</string>
+    <string name="legal_bullet_share">Запис ≠ розповсюдження. За публікацію без згоди співрозмовника відповідає користувач.</string>
+    <string name="legal_footer">Деталі та джерела — у README проєкту.</string>
+    <string name="legal_action_accept">Зрозуміло, продовжити</string>
+    <string name="legal_action_close">Закрити</string>
     <string name="settings_calibration_done">Скинуто. Наступний дзвінок проведе нове калібрування.</string>
 
     <!-- Settings: Cloud STT (transcription) -->
