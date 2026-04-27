@@ -67,7 +67,7 @@ v<MAJOR>.<MINOR>.<PATCH>-<pre>    # pre-release: -alpha.1, -beta.2, -rc.1
 Tag створюється з `main` після того як CHANGELOG секція `[Unreleased]` перейменована у `[X.Y.Z]` з датою.
 
 ```bash
-git tag -a v0.2.0 -m "Cally v0.2.0 — короткий опис"
+git tag -a v0.2.0 -m "cally v0.2.0 — короткий опис"
 git push origin v0.2.0
 ```
 

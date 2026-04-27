@@ -1,6 +1,6 @@
 # Threat model
 
-Цей документ — про те, від чого Cally захищає, від чого **не захищає**, і чому. Privacy-tool без чіткого threat model = false sense of security.
+Цей документ — про те, від чого cally захищає, від чого **не захищає**, і чому. Privacy-tool без чіткого threat model = false sense of security.
 
 ## Цільова аудиторія (хто типовий користувач)
 
@@ -88,11 +88,11 @@ Three personas, що визначають design trade-offs:
 
 ## Out-of-scope
 
-Cally **навмисно не намагається** захистити від:
+cally **навмисно не намагається** захистити від:
 
 1. **Compromised телефон** (root malware, OEM backdoor, hardware-level keylogger).
 2. **Compromised endpoint provider** при cloud-транскрипції — вибір endpoint це ваша відповідальність.
-3. **Voice cloning / deepfake risk** — Cally робить запис, але якщо хтось використає цей запис щоб клонувати ваш голос для шахрайства, це не наша поверхня атаки.
+3. **Voice cloning / deepfake risk** — cally робить запис, але якщо хтось використає цей запис щоб клонувати ваш голос для шахрайства, це не наша поверхня атаки.
 4. **Network analysis traffic correlation** — Tor support не плануємо, бо OpenAI-compat endpoints зазвичай Tor-блокують.
 5. **VoIP** — фундаментально неможливо без accessibility-tap або system app status. Telegram/WhatsApp/Signal принципово вимикаються.
 6. **Recording-detection by counterparty** — деякі мобільні платформи вже додають watermark / inaudible signal детекції що йде запис. Ми не fight з цим. Якщо counterparty детектує — to bad.

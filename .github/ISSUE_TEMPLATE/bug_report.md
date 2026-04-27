@@ -21,7 +21,7 @@ assignees: ''
 
 - Модель: <!-- e.g. Pixel 7 -->
 - Android: <!-- e.g. 14, патч 2026-03 -->
-- Версія Cally: <!-- з Налаштувань → Про додаток -->
+- Версія cally: <!-- з Налаштувань → Про додаток -->
 - Shizuku версія:
 - Чи активований AccessibilityService toggle:
 - Battery optimization exemption:

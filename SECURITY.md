@@ -4,7 +4,7 @@
 
 **Не відкривайте публічний issue для security-вразливостей.**
 
-Cally працює з sensitive surface (telephony audio, privileged Shizuku-binder, AIDL з shell-UID процесом). Помилка в `verifyCaller()`, race у lifecycle або бекдор у транскрипції можуть мати реальні наслідки для користувачів.
+cally працює з sensitive surface (telephony audio, privileged Shizuku-binder, AIDL з shell-UID процесом). Помилка в `verifyCaller()`, race у lifecycle або бекдор у транскрипції можуть мати реальні наслідки для користувачів.
 
 ### Як повідомити
 

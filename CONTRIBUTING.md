@@ -1,4 +1,4 @@
-# Contributing to Cally
+# Contributing to cally
 
 Дякую за бажання допомогти. Цей документ — як долучитися без зайвих кіл.
 

@@ -1,4 +1,4 @@
-# Cally — Pixel Call Recorder
+# cally — Pixel Call Recorder
 
 Call recording on stock **Pixel 6+** (Tensor) and other modern Android devices, **without root and without an unlocked bootloader**, via Shizuku.
 
@@ -6,13 +6,13 @@ Call recording on stock **Pixel 6+** (Tensor) and other modern Android devices, 
 >
 > **Status: MVP scaffold (v0.1.0).** Core is in place — AIDL bridge, Shizuku UserService, dual-track recorder with fallback chain, AAC encoder, foreground service, Material 3 Expressive UI. A manual test matrix on real devices is required before public release.
 
-## Why Cally
+## Why cally
 
 Stock Pixel call recorder apps **can't capture the other party's voice** — Google blocked `VOICE_CALL/UPLINK/DOWNLINK` for non-privileged apps starting Android 10. Native call recording rolled out in the Pixel Phone app in November 2025 is **not available in Ukraine** (and several other regions); region-switch on Pixel doesn't help — the gate is multi-signal (SIM/MCC, Wi-Fi BSSID, GPS, IP). Other workarounds carry significant compromises (Magisk root with Verified Boot loss; closed binaries; mono mix with volume imbalance).
 
-**Cally bypasses the block via context attribution inside the Shizuku UserService**: our private service runs in a shell-UID process (UID 2000), and `AudioRecord` is created with a context whose attribution matches the real system package `com.android.shell` — a package that exists in the package DB with the same UID 2000 and carries signature-level `RECORD_AUDIO`, `CAPTURE_AUDIO_OUTPUT`, and `MODIFY_AUDIO_ROUTING`. AudioFlinger validates `(uid=2000, pkg="com.android.shell")` against the package DB — the pair is genuine — and opens `VOICE_*` sources as for a system component.
+**cally bypasses the block via context attribution inside the Shizuku UserService**: our private service runs in a shell-UID process (UID 2000), and `AudioRecord` is created with a context whose attribution matches the real system package `com.android.shell` — a package that exists in the package DB with the same UID 2000 and carries signature-level `RECORD_AUDIO`, `CAPTURE_AUDIO_OUTPUT`, and `MODIFY_AUDIO_ROUTING`. AudioFlinger validates `(uid=2000, pkg="com.android.shell")` against the package DB — the pair is genuine — and opens `VOICE_*` sources as for a system component.
 
-The first 5 layers of this technique are publicly known from [scrcpy 2.0](https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/Workarounds.java) (yume-chan, March 2023) where it's used to mirror audio output (`REMOTE_SUBMIX`). Cally **applies it to telephony audio sources** (`VOICE_UPLINK/DOWNLINK/CALL`) — we haven't found a public description of this specific application. Layers 6-8 (live-audibility ladder, FGS bypass combination, signing pin) are this project's engineering, in response to specific telephony-recording challenges (Samsung uplink-silence, mic preamp drift on Pixel 10, daemon attack-surface).
+The first 5 layers of this technique are publicly known from [scrcpy 2.0](https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/Workarounds.java) (yume-chan, March 2023) where it's used to mirror audio output (`REMOTE_SUBMIX`). cally **applies it to telephony audio sources** (`VOICE_UPLINK/DOWNLINK/CALL`) — we haven't found a public description of this specific application. Layers 6-8 (live-audibility ladder, FGS bypass combination, signing pin) are this project's engineering, in response to specific telephony-recording challenges (Samsung uplink-silence, mic preamp drift on Pixel 10, daemon attack-surface).
 
 ## Stack
 
@@ -90,7 +90,7 @@ In debug builds `signingSha256` stays empty → verification is skipped, so loca
 2. Activate Shizuku via **Wireless Debugging** (no USB cable needed):
    - Settings → Developer Options → Wireless Debugging → On
    - In Shizuku app → "Pair via Wireless Debugging"
-3. Install the Cally APK.
+3. Install the cally APK.
 4. On first launch, grant Shizuku permission (system dialog).
 5. Make a test call. Recording starts on OFFHOOK and writes two M4A files (uplink + downlink) to `/storage/emulated/0/Android/data/dev.lyo.callrec/files/recordings/`.
 
@@ -121,7 +121,7 @@ In debug builds `signingSha256` stays empty → verification is skipped, so loca
 
 This README's legal section in the Ukrainian version is specific to **Ukrainian jurisdiction** (one-party consent, Constitution Art. 31, Criminal Code Art. 163, Personal Data Protection Law Art. 25 household exemption).
 
-For users **outside Ukraine**: jurisdictions vary widely. Some countries and US states require all-party consent (CA, FL, MD, MA, MT, NV, NH, IL, PA, WA, CT in the US; Germany under § 201 StGB; significant parts of continental Europe). EU users may also have GDPR obligations on top of criminal law. **Verify your local law before using Cally.** See `README.md` (UA) for the Ukrainian-specific guidance and the international caveats.
+For users **outside Ukraine**: jurisdictions vary widely. Some countries and US states require all-party consent (CA, FL, MD, MA, MT, NV, NH, IL, PA, WA, CT in the US; Germany under § 201 StGB; significant parts of continental Europe). EU users may also have GDPR obligations on top of criminal law. **Verify your local law before using cally.** See `README.md` (UA) for the Ukrainian-specific guidance and the international caveats.
 
 ## License
 

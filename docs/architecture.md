@@ -1,6 +1,6 @@
 # Architecture
 
-Це публічний overview архітектури Cally — без internal-bypass cookbooks (детальні engineering notes — приватні).
+Це публічний overview архітектури cally — без internal-bypass cookbooks (детальні engineering notes — приватні).
 
 ## High-level
 
@@ -114,7 +114,7 @@ Foreground service `CallMonitorService` має **`type=specialUse`**, а не `t
 
 ## Daemon lifecycle (Shizuku UserService з `daemon=true`)
 
-UserService спавниться один раз і **продовжує жити після того як наш `:app` процес помирає** або користувач свайпає Cally з recents. Наслідки:
+UserService спавниться один раз і **продовжує жити після того як наш `:app` процес помирає** або користувач свайпає cally з recents. Наслідки:
 
 - ✅ Швидкий start запису на наступному дзвінку (0 spawn overhead).
 - ✅ Залишається binding'нутим до AudioFlinger session, не треба re-init.

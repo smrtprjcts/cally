@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cally only talks to user-configured OpenAI-compatible STT endpoints, and
+  cally only talks to user-configured OpenAI-compatible STT endpoints, and
   only when transcription is opted in. We require HTTPS for every request:
   the bearer token (user's API key) MUST NOT travel over plaintext, even if
   a typo / redirect downgrades the scheme.

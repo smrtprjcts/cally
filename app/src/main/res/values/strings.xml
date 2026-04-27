@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Cally</string>
+    <string name="app_name">cally</string>
     <string name="app_tagline">Запис дзвінків без компромісів</string>
 
     <!-- Onboarding -->
@@ -105,7 +105,7 @@
 
     <!-- Accessibility — required for reliable background FG service start -->
     <string name="accessibility_service_summary">Дозволяє автоматичний запис дзвінків</string>
-    <string name="accessibility_service_description">Cally використовує службу спеціальних можливостей для надійного автоматичного старту запису, коли надходить дзвінок. Жодних подій не зчитуємо — служба потрібна лише для дозволу запускати запис у фоні.</string>
+    <string name="accessibility_service_description">cally використовує службу спеціальних можливостей для надійного автоматичного старту запису, коли надходить дзвінок. Жодних подій не зчитуємо — служба потрібна лише для дозволу запускати запис у фоні.</string>
 
     <!-- Onboarding step 5 (overlay permission for FGS-from-background) -->
     <string name="onboarding_step_overlay">Поверх інших додатків</string>
@@ -114,7 +114,7 @@
 
     <!-- Onboarding step 6 (battery exemption) -->
     <string name="onboarding_step_battery">Без сну</string>
-    <string name="onboarding_step_battery_desc">Samsung та Pixel заморожують додатки, коли вони не на екрані. Без цього дозволу Cally не зможе ввімкнутися сама, щоб записати дзвінок.</string>
+    <string name="onboarding_step_battery_desc">Samsung та Pixel заморожують додатки, коли вони не на екрані. Без цього дозволу cally не зможе ввімкнутися сама, щоб записати дзвінок.</string>
     <string name="onboarding_step_battery_action">Дозволити</string>
 
     <!-- Settings -->

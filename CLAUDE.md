@@ -4,7 +4,7 @@
 
 ## Що це
 
-**Cally** — Android call recorder для Pixel 6+ та інших сучасних Android-пристроїв через Shizuku, без root і unlocked bootloader. Обхід Google'івського блокування `VOICE_*` AudioSource через UID-impersonation `com.android.shell` всередині Shizuku UserService.
+**cally** — Android call recorder для Pixel 6+ та інших сучасних Android-пристроїв через Shizuku, без root і unlocked bootloader. Обхід Google'івського блокування `VOICE_*` AudioSource через UID-impersonation `com.android.shell` всередині Shizuku UserService.
 
 GPL-3.0-or-later. UA-проєкт.
 
@@ -26,7 +26,7 @@ GPL-3.0-or-later. UA-проєкт.
 | `callrec.signingSha256` | Gradle property name | Hardcoded у `userservice/build.gradle.kts:21` як `BuildConfig.APP_SIGNING_SHA256`. Зміна імені property → CI/CD breaks. |
 | `CallrecAccessibilityService` | Class name + manifest entry + accessibility_service_config.xml | Користувачі активують у системних Settings → Accessibility; рінейм після релізу = втрата активації у всіх existing users. |
 
-**Бренд** = «Cally» (README, app_name, rootProject.name). **Внутрішні ідентифікатори** = `callrec` (legacy від першої ітерації). Це **навмисна** інконсистентність: бренд може еволюціонувати, signing identity не може.
+**Бренд** = «cally» (README, app_name, rootProject.name). **Внутрішні ідентифікатори** = `callrec` (legacy від першої ітерації). Це **навмисна** інконсистентність: бренд може еволюціонувати, signing identity не може.
 
 Якщо колись треба буде повний rebrand `callrec → cally` — робити окремою feature branch, не змішувати з функціональними змінами, bump versionCode userservice (`userServiceVersion` у `userservice/build.gradle.kts`) обов'язково.
 
