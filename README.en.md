@@ -2,6 +2,13 @@
 
 Call recording on stock **Pixel 6+** (Tensor) and other modern Android devices, **without root and without an unlocked bootloader**, via Shizuku.
 
+<p align="center">
+  <img src="docs/screenshots/01-home.png" width="220" alt="Call list">
+  <img src="docs/screenshots/02-playback.png" width="220" alt="Playback">
+  <img src="docs/screenshots/03-transcript.png" width="220" alt="Transcript">
+  <img src="docs/screenshots/04-settings.png" width="220" alt="Settings">
+</p>
+
 > 🇺🇦 **Full documentation in Ukrainian:** [`README.md`](README.md). This English version is condensed.
 >
 > **Status: MVP scaffold (v0.1.0).** Core is in place — AIDL bridge, Shizuku UserService, dual-track recorder with fallback chain, AAC encoder, foreground service, Material 3 Expressive UI. A manual test matrix on real devices is required before public release.

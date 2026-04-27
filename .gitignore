@@ -16,6 +16,11 @@ keystore.properties
 *.jks
 *.keystore
 
+# Local environment / secrets — must never be tracked.
+.env
+.env.*
+!.env.example
+
 # Local-only scratch / research / notes — not part of the published source.
 apk_extracted/
 notes/
