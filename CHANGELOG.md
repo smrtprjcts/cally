@@ -5,6 +5,26 @@
 ## [Unreleased]
 
 ### Додано
+-
+
+### Змінено
+-
+
+### Виправлено
+-
+
+### Безпека
+-
+
+### Видалено
+-
+
+### Застаріле (Deprecated)
+-
+
+## [0.3.0] — 2026-04-28
+
+### Додано
 - **Bypass-health AIDL signal** — `WrappedShellContext` тепер відстежує покриття reflection-патчів (sCurrentActivityThread / mSystemThread / mInitialApplication / mBoundApplication) як `BypassHealth` enum (Failed / Degraded / Full), доступний через новий AIDL-метод `getBypassHealth() = 4`. Calibration ladder в `RecorderController` більше не отруює `Capabilities` cache strategy-failure'ами коли реальна причина — bypass деградація.
 - **`DaemonHealth` sealed state machine** — заміняє legacy `ShizukuState` enum + окремий `service: StateFlow<IRecorderService?>`. Шість станів: `NotInstalled / NotRunning / NoPermission / Stale / Bound(service) / Unhealthy(reason)`. Single source of truth для всіх UI-та-сервіс споживачів стану Shizuku/UserService.
 - **System notification про daemon health** — нове сповіщення на каналі `callrec.status` з'являється коли `DaemonHealth != Bound` і авто-зникає при відновленні. Tap відкриває setup screen з deep-link state-aware action (`EXTRA_FROM_HEALTH_NOTIF`). VISIBILITY_PRIVATE для privacy.
@@ -114,6 +134,7 @@
 - Bluetooth-гарнітура під час дзвінка може зламати запис на деяких HAL.
 - Samsung One UI 5.1+ потребує fallback на MIC-only стратегії — VOICE_* з shell UID повертає тишу.
 
-[Unreleased]: https://github.com/LyoSU/cally/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/LyoSU/cally/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/LyoSU/cally/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LyoSU/cally/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LyoSU/cally/releases/tag/v0.1.0
