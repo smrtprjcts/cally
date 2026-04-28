@@ -91,7 +91,6 @@ class RecorderController(
     @Volatile private var downlinkMeter: AudioLevelMeter? = null
     @Volatile private var activeOutcome: Outcome? = null
     @Volatile private var stopping = false
-    @Volatile private var bailedOnDeadDaemon = false
 
     fun setSampleRate(hz: Int) { sampleRate = hz }
 
@@ -130,7 +129,6 @@ class RecorderController(
             return
         }
         val mutateCache = bypassHealth == 2 /* Full */
-        bailedOnDeadDaemon = false
 
         val caps = capabilities.current() ?: Capabilities(android.os.Build.FINGERPRINT, null)
         L.i("Recorder", "caps preferred=${caps.preferredStrategy?.name ?: "-"} silent=${caps.knownSilent.map { it.name }} failedInit=${caps.knownFailedInit.map { it.name }}")
@@ -146,88 +144,90 @@ class RecorderController(
         L.i("Recorder", "callId=$callId ladder=${ladder.map { it.name }}")
 
         for (strategy in ladder) {
-            if (bailedOnDeadDaemon) return
             if (stopping) return
             _state.value = RecordingState.Probing(strategy)
             L.d("Recorder", "trying ${strategy.name}…")
-            val attempt = openStrategy(svc, callId, strategy)
-            if (attempt == null) {
-                // Daemon-binder death is NOT a real init failure — don't
-                // poison the capability cache (otherwise the strategy that
-                // was actually working gets blacklisted on the next call).
-                if (bailedOnDeadDaemon) return
-                val daemonErr = runCatching { svc.lastError }.getOrNull().orEmpty()
-                L.w("Recorder", "${strategy.name} init FAILED. daemon=$daemonErr")
-                if (mutateCache) {
-                    capabilities.update { it.copy(knownFailedInit = it.knownFailedInit + strategy) }
+            when (val result = openStrategy(svc, callId, strategy)) {
+                is OpenResult.Transient -> {
+                    L.w("Recorder", "${strategy.name} TRANSIENT: ${result.reason}")
+                    _state.value = RecordingState.Failed(result.reason)
+                    return  // bail without cache mutation
                 }
-                continue
-            }
-            L.i("Recorder", "${strategy.name} opened → verifying audibility")
-            // Strategy is open — kick off pumps and watch for silence.
-            adopt(attempt)
-            val verdict = waitForSignalOrSilence()
-            when (verdict) {
-                Verdict.Audible -> {
-                    L.i("Recorder", "${strategy.name} AUDIBLE — adopting (uplink=${uplinkMeter?.lastRms} dn=${downlinkMeter?.lastRms})")
+                is OpenResult.InitFailure -> {
+                    L.w("Recorder", "${strategy.name} INIT_FAIL: ${result.reason}")
                     if (mutateCache) {
-                        capabilities.update {
-                            it.copy(
-                                preferredStrategy = strategy,
-                                // Recovery: this strategy worked, drop it from
-                                // silence list and reset its strike count.
-                                knownSilent = it.knownSilent - strategy,
-                                silentStrikes = it.silentStrikes - strategy,
-                            )
-                        }
+                        capabilities.update { it.copy(knownFailedInit = it.knownFailedInit + strategy) }
                     }
-                    return
+                    continue
                 }
-                Verdict.Silent -> {
-                    L.w("Recorder", "${strategy.name} SILENT for ${SILENCE_GRACE_MS}ms (uplink=${uplinkMeter?.lastRms} dn=${downlinkMeter?.lastRms})")
-                    // Special case: SingleMic is the guaranteed last resort.
-                    if (strategy == Strategy.SingleMic) {
-                        L.i("Recorder", "SingleMic ambient was quiet but adopting anyway (last-resort)")
-                        if (mutateCache) {
-                            capabilities.update { it.copy(preferredStrategy = strategy) }
+                is OpenResult.Success -> {
+                    L.i("Recorder", "${strategy.name} opened → verifying audibility")
+                    // Strategy is open — kick off pumps and watch for silence.
+                    adopt(result.outcome)
+                    val verdict = waitForSignalOrSilence()
+                    when (verdict) {
+                        Verdict.Audible -> {
+                            L.i("Recorder", "${strategy.name} AUDIBLE — adopting (uplink=${uplinkMeter?.lastRms} dn=${downlinkMeter?.lastRms})")
+                            if (mutateCache) {
+                                capabilities.update {
+                                    it.copy(
+                                        preferredStrategy = strategy,
+                                        // Recovery: this strategy worked, drop it from
+                                        // silence list and reset its strike count.
+                                        knownSilent = it.knownSilent - strategy,
+                                        silentStrikes = it.silentStrikes - strategy,
+                                    )
+                                }
+                            }
+                            return
                         }
-                        return
-                    }
-                    // Tell the daemon to stop+release this AudioRecord BEFORE
-                    // we drain the pumps. Without this the next strategy fails
-                    // with `state=3 not IDLE` because the previous AudioRecord
-                    // is still in RECORDSTATE_RECORDING.
-                    runCatching { svc.stop() }
-                    // Increment the consecutive-silent counter; only blacklist
-                    // after SILENT_STRIKES_BEFORE_BLACKLIST in a row. One-off
-                    // silence on Samsung means "modem hadn't opened the path
-                    // yet" — not a permanent capability gap.
-                    if (mutateCache) {
-                        capabilities.update { caps ->
-                            val nextStrikes = (caps.silentStrikes[strategy] ?: 0) + 1
-                            val updated = caps.silentStrikes + (strategy to nextStrikes)
-                            caps.copy(
-                                silentStrikes = updated,
-                                knownSilent = if (nextStrikes >= Capabilities.SILENT_STRIKES_BEFORE_BLACKLIST)
-                                    caps.knownSilent + strategy else caps.knownSilent,
-                            )
+                        Verdict.Silent -> {
+                            L.w("Recorder", "${strategy.name} SILENT for ${SILENCE_GRACE_MS}ms (uplink=${uplinkMeter?.lastRms} dn=${downlinkMeter?.lastRms})")
+                            // Special case: SingleMic is the guaranteed last resort.
+                            if (strategy == Strategy.SingleMic) {
+                                L.i("Recorder", "SingleMic ambient was quiet but adopting anyway (last-resort)")
+                                if (mutateCache) {
+                                    capabilities.update { it.copy(preferredStrategy = strategy) }
+                                }
+                                return
+                            }
+                            // Tell the daemon to stop+release this AudioRecord BEFORE
+                            // we drain the pumps. Without this the next strategy fails
+                            // with `state=3 not IDLE` because the previous AudioRecord
+                            // is still in RECORDSTATE_RECORDING.
+                            runCatching { svc.stop() }
+                            // Increment the consecutive-silent counter; only blacklist
+                            // after SILENT_STRIKES_BEFORE_BLACKLIST in a row. One-off
+                            // silence on Samsung means "modem hadn't opened the path
+                            // yet" — not a permanent capability gap.
+                            if (mutateCache) {
+                                capabilities.update { caps ->
+                                    val nextStrikes = (caps.silentStrikes[strategy] ?: 0) + 1
+                                    val updated = caps.silentStrikes + (strategy to nextStrikes)
+                                    caps.copy(
+                                        silentStrikes = updated,
+                                        knownSilent = if (nextStrikes >= Capabilities.SILENT_STRIKES_BEFORE_BLACKLIST)
+                                            caps.knownSilent + strategy else caps.knownSilent,
+                                    )
+                                }
+                            }
+                            teardown()
+                            // Drop the just-written silent files — only a couple of
+                            // seconds of zero PCM, not worth keeping.
+                            when (val out = activeOutcome) {
+                                is Outcome.Dual -> {
+                                    runCatching { java.io.File(out.uplink.path).delete() }
+                                    runCatching { java.io.File(out.downlink.path).delete() }
+                                }
+                                is Outcome.Single -> runCatching { java.io.File(out.file.path).delete() }
+                                else -> Unit
+                            }
+                            activeOutcome = null
+                            // loop continues to next strategy
                         }
+                        Verdict.UserStopped -> return
                     }
-                    teardown()
-                    // Drop the just-written silent files — only a couple of
-                    // seconds of zero PCM, not worth keeping.
-                    when (val out = activeOutcome) {
-                        is Outcome.Dual -> {
-                            runCatching { java.io.File(out.uplink.path).delete() }
-                            runCatching { java.io.File(out.downlink.path).delete() }
-                        }
-                        is Outcome.Single -> runCatching { java.io.File(out.file.path).delete() }
-                        else -> Unit
-                    }
-                    activeOutcome = null
-                    // loop continues to next strategy
                 }
-                Verdict.UserStopped -> return
             }
         }
         _state.value = RecordingState.Failed("All strategies returned silence")
@@ -256,12 +256,21 @@ class RecorderController(
         svc: dev.lyo.callrec.aidl.IRecorderService,
         callId: String,
         strategy: Strategy,
-    ): Outcome? {
-        return if (strategy.isDual) {
-            tryDual(svc, callId, strategy)
-        } else {
-            trySingle(svc, callId, strategy)
+    ): OpenResult = try {
+        val outcome = if (strategy.isDual) tryDual(svc, callId, strategy)
+                      else trySingle(svc, callId, strategy)
+        when {
+            outcome != null -> OpenResult.Success(outcome)
+            else -> OpenResult.InitFailure(runCatching { svc.lastError }.getOrNull().orEmpty().ifEmpty { "init failed" })
         }
+    } catch (_: android.os.DeadObjectException) {
+        OpenResult.Transient("daemon disconnected")
+    } catch (e: android.os.RemoteException) {
+        OpenResult.Transient("remote IPC: ${e.message}")
+    } catch (e: SecurityException) {
+        // Permanent: signing pin mismatch in daemon. Surface loud, do NOT cache.
+        L.e("Recorder", "verifyCaller rejected — release signature mismatch?", e)
+        OpenResult.Transient("signature mismatch — reinstall required")
     }
 
     private fun tryDual(
@@ -277,11 +286,9 @@ class RecorderController(
         val mask = try {
             svc.startDualRecord(strategy.uplinkSource!!, strategy.downlinkSource!!, sampleRate, upWrite, dnWrite)
         } catch (e: android.os.DeadObjectException) {
-            _state.value = RecordingState.Failed("Shizuku daemon disconnected — retry")
-            bailedOnDeadDaemon = true
             runCatching { upWrite.close() }; runCatching { dnWrite.close() }
             runCatching { upRead.close() }; runCatching { dnRead.close() }
-            return null
+            throw e  // bubble to openStrategy → Transient
         } catch (_: Throwable) { 0 }
         runCatching { upWrite.close() }; runCatching { dnWrite.close() }
 
@@ -312,11 +319,9 @@ class RecorderController(
         val ok = try {
             svc.startSingleRecord(strategy.singleSource!!, sampleRate, channelMask, write)
         } catch (e: android.os.DeadObjectException) {
-            _state.value = RecordingState.Failed("Shizuku daemon disconnected — retry")
-            bailedOnDeadDaemon = true
             runCatching { write.close() }
             runCatching { read.close() }
-            return null
+            throw e  // bubble to openStrategy → Transient
         } catch (_: Throwable) { 0 }
         runCatching { write.close() }
 
@@ -340,6 +345,12 @@ class RecorderController(
         activeOutcome = out
         _levels.value = Levels(hasDownlink = out is Outcome.Dual)
         _state.value = RecordingState.Active(out)
+    }
+
+    private sealed interface OpenResult {
+        data class Success(val outcome: Outcome) : OpenResult
+        data class InitFailure(val reason: String) : OpenResult
+        data class Transient(val reason: String) : OpenResult
     }
 
     private enum class Verdict { Audible, Silent, UserStopped }
