@@ -58,7 +58,7 @@ The full layer-by-layer breakdown is in the Ukrainian README. In short:
 - **Pixel 6+ or modern Android device** (Samsung Galaxy S22+ with One UI 5+ supported through fallback strategies)
 - **JDK 21** (auto-provisioned via foojay resolver if you only have JDK 17)
 - **Android SDK 36** (`compileSdk = targetSdk = 36`)
-- **Shizuku** ([shizuku.rikka.app](https://shizuku.rikka.app/)) installed and activated via Wireless Debugging
+- **Shizuku** — recommended: community build [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku/releases) (auto-restart watchdog, persistent ADB pairing, actively maintained; upstream RikkaApps hasn't been updated in a long time). Activate via Wireless Debugging.
 
 ## Build
 
@@ -93,7 +93,7 @@ In debug builds `signingSha256` stays empty → verification is skipped, so loca
 
 ## Usage
 
-1. Install **Shizuku** from Play Store (or from [shizuku.rikka.app](https://shizuku.rikka.app/)).
+1. Install **Shizuku** — recommended: community build [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku/releases) (auto-restart watchdog, persistent ADB pairing, actively maintained). Upstream RikkaApps hasn't been updated in a long time.
 2. Activate Shizuku via **Wireless Debugging** (no USB cable needed):
    - Settings → Developer Options → Wireless Debugging → On
    - In Shizuku app → "Pair via Wireless Debugging"

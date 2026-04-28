@@ -460,7 +460,7 @@ echo "callrec.signingSha256=<hash>" >> ~/.gradle/gradle.properties
 
 ## Використання
 
-1. Встанови **Shizuku** з Play Store (або з [shizuku.rikka.app](https://shizuku.rikka.app/)).
+1. Встанови **Shizuku** — рекомендуємо community-збірку [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku/releases) (auto-restart watchdog, persistent ADB pairing, активна підтримка). Upstream RikkaApps давно не оновлювався.
 2. Активуй Shizuku через **Wireless Debugging** (без USB-кабеля):
    - Settings → Developer Options → Wireless Debugging → On
    - У Shizuku app → "Pair via Wireless Debugging"

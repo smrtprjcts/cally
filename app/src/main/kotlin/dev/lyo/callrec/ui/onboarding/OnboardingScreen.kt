@@ -368,16 +368,12 @@ private fun StepCard(
 }
 
 private fun openShizukuStorePage(ctx: android.content.Context) {
-    // Try Play Store first; if not present (de-Googled devices), fall back to
-    // Shizuku's official site.
-    val pkg = "moe.shizuku.privileged.api"
-    val market = Intent(Intent.ACTION_VIEW, "market://details?id=$pkg".toUri())
+    // Send users to thedjchi/Shizuku GitHub releases — community build with
+    // auto-restart watchdog and persistent ADB pairing. Upstream RikkaApps
+    // is rarely updated; Play Store delivers the stale upstream too.
+    val web = Intent(Intent.ACTION_VIEW, "https://github.com/thedjchi/Shizuku/releases".toUri())
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    val web = Intent(Intent.ACTION_VIEW, "https://shizuku.rikka.app/download".toUri())
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { ctx.startActivity(market) }.onFailure {
-        runCatching { ctx.startActivity(web) }
-    }
+    runCatching { ctx.startActivity(web) }
 }
 
 private fun openShizukuApp(ctx: android.content.Context) {
