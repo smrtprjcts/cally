@@ -59,6 +59,14 @@ internal class WrappedShellContext(
      */
     private val opPackage: String = SHELL_PACKAGE
 
+    private var finalPatchCount: Int = 0
+
+    val health: BypassHealth get() = when {
+        finalPatchCount == 4 -> BypassHealth.Full
+        finalPatchCount > 0 -> BypassHealth.Degraded
+        else -> BypassHealth.Failed
+    }
+
     init {
         // Build a fake Application bound to *this* wrapper. All identity
         // queries through Application.getAttributionSource() / getOpPackageName
@@ -67,15 +75,7 @@ internal class WrappedShellContext(
             Instrumentation.newApplication(Application::class.java, this)
         }.onFailure { Log.w(TAG, "newApplication failed", it) }.getOrNull()
 
-        // Track each patch separately so the final log line states which
-        // links of the AudioFlinger identity chain are actually wired —
-        // partial success is silent fallback, not a failure, but diagnostics
-        // need to surface it (a future Android version that renames any of
-        // these fields will appear here as a string of `false`s).
-        var patchedSCurrent = false
-        var patchedSystemThread = false
-        var patchedInitialApp = false
-        var patchedBoundApp = false
+        var patchCount = 0
 
         // ── Patch ActivityThread internals ─────────────────────────────────
         // These are the fields AudioFlinger ultimately consults via the
@@ -91,7 +91,7 @@ internal class WrappedShellContext(
             runCatching {
                 atCls.getDeclaredField("sCurrentActivityThread").apply { isAccessible = true }
                     .set(null, atInstance)
-                patchedSCurrent = true
+                patchCount++
             }.onFailure { Log.w(TAG, "sCurrentActivityThread set failed", it) }
 
             // mSystemThread = true → marks this AT as belonging to the system
@@ -101,7 +101,7 @@ internal class WrappedShellContext(
             runCatching {
                 atCls.getDeclaredField("mSystemThread").apply { isAccessible = true }
                     .setBoolean(atInstance, true)
-                patchedSystemThread = true
+                patchCount++
             }.onFailure { Log.w(TAG, "mSystemThread set failed", it) }
 
             // mInitialApplication is what currentApplication() returns. Wire
@@ -111,7 +111,7 @@ internal class WrappedShellContext(
                 runCatching {
                     atCls.getDeclaredField("mInitialApplication").apply { isAccessible = true }
                         .set(atInstance, fakeApp)
-                    patchedInitialApp = true
+                    patchCount++
                 }.onFailure { Log.w(TAG, "mInitialApplication set failed", it) }
             }
 
@@ -134,16 +134,16 @@ internal class WrappedShellContext(
                     .getDeclaredField("appInfo")
                     .apply { isAccessible = true }
                     .set(bound, appInfo)
-                patchedBoundApp = true
+                patchCount++
             }.onFailure { Log.w(TAG, "AppBindData patch failed", it) }
         }.onFailure { Log.e(TAG, "ActivityThread patches failed", it) }
 
         Log.i(
             TAG,
             "WrappedShellContext init: pkg=$opPackage uid=${Process.myUid()} " +
-                "patches=[sCur=$patchedSCurrent sysThread=$patchedSystemThread " +
-                "initApp=$patchedInitialApp boundApp=$patchedBoundApp]",
+                "patches=$patchCount/4",
         )
+        this.finalPatchCount = patchCount
     }
 
     // ── Identity overrides — what AppOps / AudioFlinger see ────────────────
@@ -205,3 +205,5 @@ internal class WrappedShellContext(
         )
     }
 }
+
+enum class BypassHealth { Failed, Degraded, Full }  // ordinal must match AIDL int

@@ -20,12 +20,9 @@ val appPackageId = "dev.lyo.callrec"
 // the Shizuku daemon (daemon=true) checks this and respawns if its in-memory
 // version differs from the freshly-installed APK's version.
 //
-// 11: AudioRecorderJob.stop() now force-closes outFd on join timeout
-//     (pipe-write watchdog) and RecorderService removed WRITE_SECURE_SETTINGS
-//     from grantPermission's allow-list. Both change daemon behaviour
-//     observable across the AIDL boundary, so an in-flight v10 daemon must
-//     respawn against a v11 APK.
-val userServiceVersion = 11
+// 12: getBypassHealth() added; probeSource() and grantPermission() removed.
+//     AIDL contract changed — in-flight v11 daemon must respawn.
+val userServiceVersion = 12
 
 // Auto-derive the release certificate's SHA-256 from the keystore so the
 // verifyCaller() pin always matches the APK we just signed — without forcing

@@ -4,7 +4,6 @@ package dev.lyo.callrec.userservice
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioFormat
-import android.media.AudioRecord
 import android.os.Binder
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
@@ -64,6 +63,12 @@ class RecorderService : IRecorderService.Stub() {
     private val lastError = AtomicReference<String?>(null)
 
     override fun getVersion(): Int = BuildConfig.VERSION_CODE_USERSERVICE
+
+    override fun getBypassHealth(): Int = when {
+        Process.myUid() == 0 -> 2  // root: no bypass needed → trivially Full
+        captureContext is WrappedShellContext -> captureContext.health.ordinal
+        else -> 0  // non-root without wrapper = misconfigured = Failed
+    }
 
     override fun startDualRecord(
         uplinkSource: Int,
@@ -164,58 +169,6 @@ class RecorderService : IRecorderService.Stub() {
 
     override fun getLastError(): String? = lastError.get()
 
-    override fun probeSource(source: Int, sampleRate: Int, durationMs: Int): Int {
-        verifyCaller()
-        // Need the AppOps-friendly main-Looper ctor; reuse AudioRecorderJob
-        // and reach into its (private) record reference via init+release.
-        // Cheaper than duplicating the pattern.
-        val pipe = ParcelFileDescriptor.createReliablePipe()
-        val read = pipe[0]; val write = pipe[1]
-        val job = AudioRecorderJob(
-            tag = "probe-$source",
-            source = source,
-            sampleRate = sampleRate,
-            channelMask = AudioFormat.CHANNEL_IN_MONO,
-            outFd = write,
-            context = captureContext,
-        )
-        if (!job.init()) {
-            runCatching { write.close() }
-            runCatching { read.close() }
-            Log.w(TAG, "probeSource: init failed src=$source — ${job.errorMessage}")
-            return -1
-        }
-        // We can't easily read the PCM here without consuming the pipe;
-        // for now return 0 to indicate "init OK, audibility unknown" and
-        // rely on real-call audibility verification in RecorderController.
-        job.stop()
-        runCatching { read.close() }
-        return 0
-    }
-
-    /**
-     * Grant a runtime permission to **our own package** (canonical or `.debug`
-     * suffix). Restricted to a hardcoded allow-list — earlier code took an
-     * arbitrary `packageName` + `permission` and would have been an LPE
-     * primitive if any future caller plumbed attacker-controlled args through.
-     *
-     * The verifyCaller() pin keeps foreign apps out of the AIDL surface, but
-     * the allow-list is defence-in-depth: even an internal misuse can't
-     * accidentally `pm grant` arbitrary packages arbitrary permissions.
-     */
-    override fun grantPermission(packageName: String, permission: String): Boolean {
-        verifyCaller()
-        val ourPkg = BuildConfig.APP_PACKAGE_ID
-        val packageOk = packageName == ourPkg || packageName == "$ourPkg.debug"
-        if (!packageOk) return false
-        if (permission !in ALLOWED_GRANT_PERMS) return false
-        return try {
-            val proc = ProcessBuilder("pm", "grant", packageName, permission)
-                .redirectErrorStream(true).start()
-            proc.waitFor() == 0
-        } catch (_: Throwable) { false }
-    }
-
     /**
      * Defence in depth: with `daemon=true` the Binder lives across our app's
      * lifetime. Any other Shizuku-permitted package on the device could in
@@ -281,16 +234,6 @@ class RecorderService : IRecorderService.Stub() {
         const val STATE_SINGLE = 3
         const val STATE_ERROR = 9
 
-        /**
-         * Hardcoded allow-list for [grantPermission]. We only use the
-         * UserService to attach signature-level perms that the platform will
-         * never grant a normal-UID app — anything user-grantable goes through
-         * the standard runtime permissions flow in the app. Adding to this
-         * list requires both an explicit code change AND a manifest entry.
-         */
-        private val ALLOWED_GRANT_PERMS = setOf(
-            "android.permission.READ_LOGS",
-        )
         private val HEX = "0123456789abcdef".toCharArray()
     }
 }
