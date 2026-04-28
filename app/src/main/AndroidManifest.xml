@@ -54,14 +54,6 @@
     -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
-    <!--
-      Sensitive permissions we never expect the platform to grant directly.
-      Our UserService runs `pm grant` from UID 2000 to attach them on demand
-      (e.g. logcat parsing for ringback detection).
-    -->
-    <uses-permission android:name="android.permission.READ_LOGS"
-        tools:ignore="ProtectedPermissions" />
-
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
     </queries>

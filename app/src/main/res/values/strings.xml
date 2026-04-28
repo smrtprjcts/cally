@@ -187,4 +187,27 @@
 
     <!-- Errors -->
     <string name="err_shizuku_denied">Дозвіл відхилено</string>
+
+    <!-- Daemon health notifications -->
+    <string name="daemon_notinstalled_title">cally: Shizuku not installed</string>
+    <string name="daemon_notinstalled_body">Tap to set up</string>
+    <string name="daemon_notrunning_title">cally: Shizuku stopped</string>
+    <string name="daemon_notrunning_body">Reopen Shizuku to record calls</string>
+    <string name="daemon_nopermission_title">cally: permission needed</string>
+    <string name="daemon_nopermission_body">Tap to grant Shizuku access</string>
+    <string name="daemon_stale_title">cally: restart needed</string>
+    <string name="daemon_stale_body">Tap to refresh recorder</string>
+    <string name="daemon_unhealthy_title">cally: recorder unresponsive</string>
+    <string name="daemon_unhealthy_body">Tap to restart</string>
+    <string name="overlay_perm_missing_title">cally: overlay permission needed</string>
+    <string name="overlay_perm_missing_body">Cannot record without it on Android 14+</string>
+
+    <!-- Onboarding tip (used by Task 18) -->
+    <string name="onboarding_shizuku_tip_title">For best reliability</string>
+    <string name="onboarding_shizuku_tip_body">Consider community Shizuku builds with auto-restart and persistent ADB pairing.</string>
+    <string name="onboarding_shizuku_tip_cta">Learn more</string>
+
+    <!-- POST_NOTIFICATIONS rationale (used by Task 18) -->
+    <string name="onboarding_notif_perm_title">Allow notifications</string>
+    <string name="onboarding_notif_perm_body">Needed to alert you if Shizuku stops working.</string>
 </resources>

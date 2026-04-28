@@ -8,6 +8,7 @@ import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import dev.lyo.callrec.App
+import dev.lyo.callrec.R
 import dev.lyo.callrec.core.L
 import dev.lyo.callrec.notify.NotificationChannels
 import dev.lyo.callrec.ui.MainActivity
@@ -79,8 +80,8 @@ class CallStateReceiver : BroadcastReceiver() {
                                 val notif = androidx.core.app.NotificationCompat
                                     .Builder(ctx, NotificationChannels.ID_STATUS)
                                     .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                                    .setContentTitle("cally: overlay permission needed")
-                                    .setContentText("Cannot record without it on Android 14+")
+                                    .setContentTitle(ctx.getString(R.string.overlay_perm_missing_title))
+                                    .setContentText(ctx.getString(R.string.overlay_perm_missing_body))
                                     .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
                                     .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE)
                                     .setContentIntent(tap)

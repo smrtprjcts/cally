@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
+import dev.lyo.callrec.R
 import dev.lyo.callrec.recorder.DaemonHealth
 import dev.lyo.callrec.ui.MainActivity
 
@@ -20,31 +21,13 @@ object DaemonHealthNotification {
             runCatching { nm.cancel(NOTIF_ID) }
             return
         }
-        // Inline strings — replaced by R.string.daemon_* resources in Task 17
-        val title: String
-        val body: String
-        when (health) {
-            DaemonHealth.NotInstalled -> {
-                title = "cally: Shizuku not installed"
-                body = "Install Shizuku to enable call recording"
-            }
-            DaemonHealth.NotRunning -> {
-                title = "cally: Shizuku stopped"
-                body = "Open Shizuku and start the service"
-            }
-            DaemonHealth.NoPermission -> {
-                title = "cally: Shizuku permission needed"
-                body = "Open cally and grant Shizuku permission"
-            }
-            DaemonHealth.Stale -> {
-                title = "cally: Recorder needs update"
-                body = "Open cally to restart the recorder daemon"
-            }
-            is DaemonHealth.Unhealthy -> {
-                title = "cally: Recorder error"
-                body = "Open cally to restart the recorder daemon"
-            }
-            is DaemonHealth.Bound -> return  // unreachable; handled above
+        val (titleRes, bodyRes) = when (health) {
+            DaemonHealth.NotInstalled -> R.string.daemon_notinstalled_title to R.string.daemon_notinstalled_body
+            DaemonHealth.NotRunning -> R.string.daemon_notrunning_title to R.string.daemon_notrunning_body
+            DaemonHealth.NoPermission -> R.string.daemon_nopermission_title to R.string.daemon_nopermission_body
+            DaemonHealth.Stale -> R.string.daemon_stale_title to R.string.daemon_stale_body
+            is DaemonHealth.Unhealthy -> R.string.daemon_unhealthy_title to R.string.daemon_unhealthy_body
+            is DaemonHealth.Bound -> return
         }
         val tap = PendingIntent.getActivity(
             ctx, 0,
@@ -56,8 +39,8 @@ object DaemonHealthNotification {
         )
         val notif = NotificationCompat.Builder(ctx, NotificationChannels.ID_STATUS)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle(title)
-            .setContentText(body)
+            .setContentTitle(ctx.getString(titleRes))
+            .setContentText(ctx.getString(bodyRes))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true)
