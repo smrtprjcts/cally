@@ -5,6 +5,26 @@
 ## [Unreleased]
 
 ### Додано
+-
+
+### Змінено
+-
+
+### Виправлено
+-
+
+### Безпека
+-
+
+### Видалено
+-
+
+### Застаріле (Deprecated)
+-
+
+## [0.2.0] — 2026-04-28
+
+### Додано
 - First-run legal disclaimer (ModalBottomSheet) з 3-tier таксономією юрисдикцій: (1) one-party consent — без сповіщення, (2) all-party + implied consent — достатньо попередити, (3) explicit consent — потрібна явна згода (DE/AT/BE). Кожен tier розгортається тапом, відкриваючи legal references (§ 201 StGB, 18 U.S.C. § 2511, CA Penal Code § 632 тощо). Завжди видимий tech-блок про неможливість beep-сповіщення через uplink.
 - Settings → Про додаток → "Юридичне попередження" — повторне відкриття того самого sheet'а як read-only.
 - Версійований DataStore-флаг `disclaimer_accepted_v1` для майбутнього re-prompt при істотних змінах тексту.
@@ -33,7 +53,7 @@
 - Англомовна локаль (`values-en/strings.xml`)
 - Encrypted vault (AES-GCM, PIN/biometric)
 - GitHub Actions CI (lint + test + assembleDebug)
-- Скріншоти у README
+- Material 3 ButtonGroup overload migration (5 callsites — `overflowIndicator` parameter)
 
 ## [0.1.0] — 2026-04-27
 
@@ -76,5 +96,6 @@
 - Bluetooth-гарнітура під час дзвінка може зламати запис на деяких HAL.
 - Samsung One UI 5.1+ потребує fallback на MIC-only стратегії — VOICE_* з shell UID повертає тишу.
 
-[Unreleased]: https://github.com/LyoSU/cally/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/LyoSU/cally/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/LyoSU/cally/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LyoSU/cally/releases/tag/v0.1.0
