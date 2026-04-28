@@ -15,5 +15,10 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:label="Seed Data" />
+
+        <activity
+            android:name="dev.lyo.callrec.debug.DaemonHealthDebugActivity"
+            android:exported="false"
+            android:label="cally Health Debug" />
     </application>
 </manifest>
