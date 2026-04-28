@@ -4,34 +4,33 @@ package dev.lyo.callrec.codec
 import kotlin.math.sqrt
 
 /**
- * Running RMS over 16-bit little-endian PCM. Cheap enough to run on every
- * pump tick (a few microseconds for an 8 KB buffer). The result is consumed
- * both by the UI (live level meter) and by the controller's silence detector
- * (auto-fallback if the chosen source is HAL-muted).
+ * Running RMS over 16-bit little-endian PCM. Cheap; runs on every pump tick.
+ * Drives the live UI meter and the controller's audibility decision via an
+ * adaptive noise floor — the first ~500 ms of samples set [calibratedFloor],
+ * and [isAudible] is true iff the latest RMS is meaningfully above floor.
  *
- * RMS is normalised to the full-scale of int16 → returns a `Float` in
- * `[0.0f, 1.0f]`. Real-world voice content lives roughly 0.02-0.30; anything
- * < ~0.001 sustained for more than a second is "silence".
+ * RMS is normalised to int16 full-scale → returns Float in [0.0, 1.0].
  */
 class AudioLevelMeter {
 
     @Volatile var lastRms: Float = 0f
         private set
-    /** Highest RMS observed since [reset] — used post-recording to decide whether a track was permanently silent. */
     @Volatile var maxRms: Float = 0f
         private set
     @Volatile var totalFrames: Long = 0L
         private set
-    /** Frames at or below the silence floor since [reset]. */
     @Volatile var silentFrames: Long = 0L
         private set
+    /** Median RMS of the warmup window. INITIAL_FLOOR until warmup completes. */
+    @Volatile var calibratedFloor: Float = INITIAL_FLOOR
+        private set
 
-    /**
-     * Compute RMS over the slice and update running counters.
-     * @param buf  raw PCM bytes (16-bit LE)
-     * @param off  byte offset
-     * @param len  byte length (must be even — caller guarantees)
-     */
+    private val warmupSamples = ArrayList<Float>(WARMUP_TARGET)
+    private var warmupComplete = false
+
+    /** True when the latest RMS sample exceeds the calibrated noise floor by [AUDIBLE_DELTA]. */
+    val isAudible: Boolean get() = lastRms > calibratedFloor + AUDIBLE_DELTA
+
     fun update(buf: ByteArray, off: Int, len: Int) {
         if (len < 2) return
         val frames = len / 2
@@ -39,9 +38,8 @@ class AudioLevelMeter {
         var i = off
         val end = off + len
         while (i < end) {
-            // Little-endian decode: low byte first.
             val low = buf[i].toInt() and 0xFF
-            val high = buf[i + 1].toInt() // signed
+            val high = buf[i + 1].toInt()
             val sample = (high shl 8) or low
             val v = sample.toDouble()
             sumSq += v * v
@@ -51,8 +49,17 @@ class AudioLevelMeter {
         lastRms = rms
         if (rms > maxRms) maxRms = rms
         totalFrames += frames
-        if (rms < SILENCE_FLOOR) silentFrames += frames
-        else silentFrames = 0  // any audible sample resets the streak
+        if (rms < SILENCE_FLOOR) silentFrames += frames else silentFrames = 0
+
+        // Warmup: collect first WARMUP_TARGET samples, then lock the median.
+        if (!warmupComplete) {
+            warmupSamples += rms
+            if (warmupSamples.size >= WARMUP_TARGET) {
+                val sorted = warmupSamples.sorted()
+                calibratedFloor = sorted[sorted.size / 2].coerceAtLeast(INITIAL_FLOOR)
+                warmupComplete = true
+            }
+        }
     }
 
     fun reset() {
@@ -60,19 +67,23 @@ class AudioLevelMeter {
         maxRms = 0f
         totalFrames = 0L
         silentFrames = 0L
+        calibratedFloor = INITIAL_FLOOR
+        warmupSamples.clear()
+        warmupComplete = false
     }
 
-    /**
-     * Time-aware silence detection. Returns true iff the meter has been
-     * receiving below-threshold audio for at least [windowMs] of contiguous
-     * frames at the given [sampleRate].
-     */
     fun isSilent(sampleRate: Int, windowMs: Long = 2_000): Boolean =
         silentFrames * 1_000L / sampleRate >= windowMs
 
     companion object {
         private const val FULL_SCALE = 32_768.0
-        /** -60 dBFS — quieter than ambient room noise, anything above is "voice". */
+        /** -60 dBFS — quieter than ambient room noise. */
         private const val SILENCE_FLOOR = 0.001f
+        /** Bootstrap floor before warmup completes. */
+        private const val INITIAL_FLOOR = 0.001f
+        /** ~+6 dB above floor — empirical voice-vs-drift discriminator. */
+        private const val AUDIBLE_DELTA = 0.008f
+        /** ~500 ms at 60 ms tick cadence. */
+        private const val WARMUP_TARGET = 50
     }
 }

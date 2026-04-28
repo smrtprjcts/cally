@@ -53,4 +53,52 @@ class AudioLevelMeterTest {
         assertThat(m.isSilent(sampleRate = 16_000, windowMs = 2_000)).isTrue()
         assertThat(m.isSilent(sampleRate = 16_000, windowMs = 5_000)).isFalse()
     }
+
+    private fun rmsToBytes(rms: Float, sampleCount: Int = 256): ByteArray {
+        val amplitude = (rms * 32_768f).toInt().coerceIn(0, 32_767).toShort()
+        val out = ByteArray(sampleCount * 2)
+        for (i in 0 until sampleCount) {
+            val v = if (i % 2 == 0) amplitude else (-amplitude.toInt()).toShort()
+            out[i * 2] = (v.toInt() and 0xFF).toByte()
+            out[i * 2 + 1] = ((v.toInt() shr 8) and 0xFF).toByte()
+        }
+        return out
+    }
+
+    @Test
+    fun calibratedFloor_convergesToMedianOverWarmup() {
+        val meter = AudioLevelMeter()
+        repeat(50) { meter.update(rmsToBytes(0.003f), 0, 512) }
+        meter.update(rmsToBytes(0.003f), 0, 512)
+        assertThat(meter.calibratedFloor).isWithin(0.0005f).of(0.003f)
+    }
+
+    @Test
+    fun isAudible_falseDuringWarmup() {
+        val meter = AudioLevelMeter()
+        meter.update(rmsToBytes(0.05f), 0, 512)
+        // Before warmup completes, calibratedFloor=INITIAL_FLOOR=0.001, AUDIBLE_DELTA=0.008
+        // → threshold 0.009. 0.05 RMS exceeds → audible=true.
+        assertThat(meter.isAudible).isTrue()
+    }
+
+    @Test
+    fun isAudible_falseAtFloor_trueAboveDelta() {
+        val meter = AudioLevelMeter()
+        repeat(51) { meter.update(rmsToBytes(0.01f), 0, 512) }
+        // calibratedFloor ≈ 0.01, threshold = 0.018
+        meter.update(rmsToBytes(0.015f), 0, 512)
+        assertThat(meter.isAudible).isFalse()
+        meter.update(rmsToBytes(0.025f), 0, 512)
+        assertThat(meter.isAudible).isTrue()
+    }
+
+    @Test
+    fun reset_clearsWarmupAndFloor() {
+        val meter = AudioLevelMeter()
+        repeat(51) { meter.update(rmsToBytes(0.05f), 0, 512) }
+        assertThat(meter.calibratedFloor).isGreaterThan(0.001f)
+        meter.reset()
+        assertThat(meter.calibratedFloor).isWithin(0.00001f).of(0.001f)
+    }
 }
