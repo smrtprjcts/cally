@@ -13,10 +13,11 @@ import dev.lyo.callrec.contacts.ContactResolver
 import dev.lyo.callrec.core.L
 import dev.lyo.callrec.notify.CompletedRecordingNotification
 import dev.lyo.callrec.notify.RecordingNotification
+import dev.lyo.callrec.recorder.DaemonHealth
 import dev.lyo.callrec.recorder.RecorderController
 import dev.lyo.callrec.storage.CallRecord
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -131,53 +132,49 @@ class CallMonitorService : LifecycleService() {
 
     private suspend fun kickoff() {
         L.i("Service", "kickoff() begin")
-        val client = container.shizuku
-        client.attach(); client.refresh(); client.bind()
-        // Suspend on the StateFlow until the UserService bind completes —
-        // earlier code spun a polling loop with `delay(80)` ticks that woke
-        // the dispatcher 12.5 times/sec for up to 12 s. filterNotNull/first
-        // is a single suspend point, no wakeups while idle.
-        val svc = withTimeoutOrNull(12_000) {
-            client.service.filterNotNull().first()
-        }
-        if (svc == null) {
-            L.e("Service", "kickoff: Shizuku UserService bind timeout (12s) — bailing")
-            stopSelf(); return
-        }
+        var success = false
+        try {
+            val client = container.shizuku
+            client.attach()
+            client.refresh()
+            // Wait for Bound state — subsumes bind + version match + permission OK in one signal.
+            // The DaemonHealth.Bound data class carries the IRecorderService directly.
+            val svc = withTimeoutOrNull(12_000) {
+                client.health.filterIsInstance<DaemonHealth.Bound>().first().service
+            }
+            if (svc == null) {
+                L.e("Service", "kickoff: DaemonHealth.Bound not reached within 12s — bailing")
+                stopSelf(); return
+            }
 
-        // Wait for the modem to actually open the audio path. On Samsung One UI
-        // the OFFHOOK broadcast fires when the user *initiates* the call, but
-        // AudioManager.getMode() reports NORMAL until the modem's voice path
-        // is hot — usually 1–4 s later. Probing AudioRecord before that window
-        // gives `state=RECORDING` with zero RMS (silent stream) which used to
-        // make us blacklist the working strategy. Pixel transitions in <500 ms.
-        //
-        // Replaces the earlier `delay(150)` polling loop with the proper
-        // change-listener API (API 30+, our minSdk = 31). Zero wakeups while
-        // the modem is still warming up; we resume immediately on transition.
-        if (!manualMode) {
-            val am = getSystemService(android.content.Context.AUDIO_SERVICE)
-                as android.media.AudioManager
-            if (am.mode != android.media.AudioManager.MODE_IN_CALL &&
-                am.mode != android.media.AudioManager.MODE_IN_COMMUNICATION
-            ) {
-                val mode = withTimeoutOrNull(6_000) {
-                    awaitVoiceMode(am)
-                }
-                if (mode == null) {
-                    L.w("Service", "kickoff: still MODE_NORMAL after 6 s — proceeding anyway")
+            if (!manualMode) {
+                val am = getSystemService(android.content.Context.AUDIO_SERVICE)
+                    as android.media.AudioManager
+                if (am.mode != android.media.AudioManager.MODE_IN_CALL &&
+                    am.mode != android.media.AudioManager.MODE_IN_COMMUNICATION
+                ) {
+                    val mode = withTimeoutOrNull(6_000) { awaitVoiceMode(am) }
+                    if (mode == null) {
+                        L.w("Service", "kickoff: still MODE_NORMAL after 6 s — proceeding anyway")
+                    } else {
+                        L.i("Service", "kickoff: AudioManager.mode=$mode (audio path live)")
+                    }
                 } else {
-                    L.i("Service", "kickoff: AudioManager.mode=$mode (audio path live)")
+                    L.i("Service", "kickoff: AudioManager.mode already live (${am.mode})")
                 }
-            } else {
-                L.i("Service", "kickoff: AudioManager.mode already live (${am.mode})")
+            }
+
+            L.i("Service", "kickoff: starting recorder")
+            val callId = container.storage.newCallId()
+            currentCallId = callId
+            container.recorder.start(callId)
+            success = true
+        } finally {
+            if (!success) {
+                L.w("Service", "kickoff failed; resetting recordingStarted")
+                recordingStarted = false
             }
         }
-
-        L.i("Service", "kickoff: starting recorder")
-        val callId = container.storage.newCallId()
-        currentCallId = callId
-        container.recorder.start(callId)
     }
 
     private suspend fun persistOutcome(outcome: RecorderController.Outcome) {
