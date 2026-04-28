@@ -2,6 +2,10 @@
 package dev.lyo.callrec.ui.onboarding
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -37,12 +41,14 @@ import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,7 +63,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.provider.Settings
@@ -69,6 +77,8 @@ import dev.lyo.callrec.permissions.BatteryOptimizations
 import dev.lyo.callrec.permissions.rememberPermissionsState
 import dev.lyo.callrec.recorder.DaemonHealth
 import kotlinx.coroutines.launch
+
+private const val SHIZUKU_FORK_URL = "https://github.com/thedjchi/Shizuku"
 
 /**
  * Four ordered steps:
@@ -87,6 +97,7 @@ fun OnboardingScreen(
     onDone: () -> Unit,
 ) {
     val ctx = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val state by container.shizuku.health.collectAsState()
     val scope = rememberCoroutineScope()
     val (perms, requestPerms) = rememberPermissionsState()
@@ -112,6 +123,10 @@ fun OnboardingScreen(
             }
         }
     }
+
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* state recomputed via observer; nothing to do here */ }
 
     val readyToContinue = shizukuInstalled && shizukuActivated && shizukuPermitted &&
         allRuntimeGranted && overlayGranted && batteryExempt
@@ -172,6 +187,22 @@ fun OnboardingScreen(
                 } else null,
                 actionLabel = stringResource(R.string.onboarding_step_grant),
             )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val notifGranted = ContextCompat.checkSelfPermission(
+                    ctx, android.Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+                StepCard(
+                    index = 4,
+                    icon = Icons.Outlined.Bolt,
+                    title = stringResource(R.string.onboarding_notif_perm_title),
+                    desc = stringResource(R.string.onboarding_notif_perm_body),
+                    done = notifGranted,
+                    action = if (!notifGranted) {
+                        { notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+                    } else null,
+                    actionLabel = stringResource(R.string.onboarding_notif_perm_title),
+                )
+            }
             StepCard(
                 index = 4,
                 icon = Icons.Outlined.LockOpen,
@@ -209,6 +240,25 @@ fun OnboardingScreen(
                 } else null,
                 actionLabel = stringResource(R.string.onboarding_step_battery_action),
             )
+
+            ElevatedCard(modifier = Modifier.padding(0.dp).fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        stringResource(R.string.onboarding_shizuku_tip_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.onboarding_shizuku_tip_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    TextButton(
+                        onClick = { uriHandler.openUri(SHIZUKU_FORK_URL) },
+                    ) {
+                        Text(stringResource(R.string.onboarding_shizuku_tip_cta))
+                    }
+                }
+            }
 
             Spacer(Modifier.height(8.dp))
 
