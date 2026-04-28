@@ -110,6 +110,7 @@ internal class AudioRecorderJob(
         return result.get()
     }
 
+    @android.annotation.SuppressLint("MissingPermission")  // RECORD_AUDIO held via signature on shell UID
     private fun tryCtor(src: Int, sr: Int, ch: Int, enc: Int, buf: Int): AudioRecord? {
         return try {
             // Builder API (≥ API 31) is the only way to make AudioRecord pick
