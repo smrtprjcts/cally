@@ -105,7 +105,7 @@
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Callrec.Splash"
             android:configChanges="orientation|screenSize|smallestScreenSize|keyboardHidden|uiMode|density|navigation|locale|fontScale|fontWeightAdjustment"
             android:windowSoftInputMode="adjustResize">

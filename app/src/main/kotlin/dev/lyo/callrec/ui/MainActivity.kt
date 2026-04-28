@@ -19,9 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dev.lyo.callrec.App
 import dev.lyo.callrec.notify.CompletedRecordingNotification
+import dev.lyo.callrec.notify.DaemonHealthNotification
 import dev.lyo.callrec.permissions.SetupStatus
 import dev.lyo.callrec.ui.nav.CallrecApp
 import dev.lyo.callrec.ui.theme.CallrecTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -67,12 +69,24 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Activity is `singleTop` per the manifest — when the user taps the
-        // completed-recording notif while we're already running, we land
-        // here instead of onCreate. Forward the deep-link extra so nav
-        // jumps to the right playback.
+        setIntent(intent)  // so Compose seeing intent.extras gets the latest
+
+        // Activity is `singleTop` per the manifest — when the user taps a
+        // notification while we're already running, we land here instead of
+        // onCreate.
+
+        // Completed recording tap — deep-link to playback
         intent.getStringExtra(CompletedRecordingNotification.EXTRA_OPEN_CALL_ID)?.let {
             pendingCallId = it
+        }
+
+        // Daemon health notification tap — trigger re-check
+        if (intent.getBooleanExtra(DaemonHealthNotification.EXTRA_FROM_HEALTH_NOTIF, false)) {
+            val container = (application as App).container
+            container.appScope.launch {
+                container.shizuku.verifyHealth()
+                container.shizuku.refresh()
+            }
         }
     }
 
