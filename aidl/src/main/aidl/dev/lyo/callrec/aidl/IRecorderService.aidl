@@ -60,6 +60,19 @@ interface IRecorderService {
         in ParcelFileDescriptor pcmFd
     ) = 3;
 
+    /**
+     * Reports the WrappedShellContext patch coverage so the app can detect
+     * silent bypass degradation (a future AOSP minor renaming any of
+     * sCurrentActivityThread / mSystemThread / mInitialApplication /
+     * mBoundApplication produces a Degraded/Failed health here without
+     * the recorder caching strategy-level failures).
+     *
+     * @return 0 = Failed (no patches applied — bypass non-functional),
+     *         1 = Degraded (1-3 of 4 patches applied),
+     *         2 = Full (all 4 applied; or root UID where bypass is unneeded)
+     */
+    int getBypassHealth() = 4;
+
     /** Stops any active recording. Safe to call from idle. */
     void stop() = 10;
 
@@ -77,20 +90,7 @@ interface IRecorderService {
     @nullable
     String getLastError() = 12;
 
-    /**
-     * Probe an AudioSource: allocate an AudioRecord for `durationMs`, read PCM,
-     * compute RMS. Used to detect HAL muting (Samsung policy) before a live call.
-     *
-     * @return RMS as int (>=0), or -1 if AudioRecord could not be initialised,
-     *         -2 if the read failed
-     */
-    int probeSource(int source, int sampleRate, int durationMs) = 20;
+    // = 20 reserved (was probeSource — removed in v0.3, never used by app)
 
-    /**
-     * Run `pm grant <packageName> <permission>` from the shell UID. Used to
-     * one-shot grant `READ_LOGS` / `WRITE_SECURE_SETTINGS` to the app process.
-     *
-     * @return true if the grant command exited with status 0
-     */
-    boolean grantPermission(String packageName, String permission) = 30;
+    // = 30 reserved (was grantPermission — removed in v0.3, never used by app)
 }
