@@ -10,28 +10,28 @@ import dev.lyo.callrec.BuildConfig
 import dev.lyo.callrec.aidl.IRecorderService
 import dev.lyo.callrec.core.L
 import dev.lyo.callrec.userservice.RecorderService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.suspendCancellableCoroutine
-import rikka.shizuku.Shizuku
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import rikka.shizuku.Shizuku
 
-/**
- * Coroutine-friendly façade over the Shizuku binding API.
- *
- *  - Tracks both server presence (Binder ping) and our user-service binding.
- *  - Survives device rotation (held by [AppContainer], not the Activity).
- *  - Uses `daemon = true` so the privileged process stays alive between calls.
- *    [refresh] compares the live daemon's `getVersion()` against our build —
- *    if they diverge after an APK upgrade we tear down with `remove = true`.
- */
 class ShizukuClient(private val ctx: Context) {
 
-    private val _state = MutableStateFlow(ShizukuState.NotRunning)
-    val state: StateFlow<ShizukuState> = _state
+    private val _health = MutableStateFlow<DaemonHealth>(DaemonHealth.NotRunning)
+    val health: StateFlow<DaemonHealth> = _health
 
-    private val _service = MutableStateFlow<IRecorderService?>(null)
-    val service: StateFlow<IRecorderService?> = _service
+    /** Backward-compat accessor used by existing callers (CallMonitorService, RecorderController). */
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+    val service: StateFlow<IRecorderService?> =
+        _health.map { (it as? DaemonHealth.Bound)?.service }
+            .stateIn(GlobalScope, SharingStarted.Eagerly, null)
 
     private val args: Shizuku.UserServiceArgs by lazy {
         Shizuku.UserServiceArgs(
@@ -50,35 +50,31 @@ class ShizukuClient(private val ctx: Context) {
             val daemonVersion = runCatching { svc.version }.getOrDefault(-1)
             L.i("Shizuku", "onServiceConnected daemon v=$daemonVersion (we want $USER_SERVICE_VERSION)")
             if (daemonVersion != USER_SERVICE_VERSION) {
-                L.w("Shizuku", "Daemon stale — unbinding with remove=true to respawn")
+                L.w("Shizuku", "Daemon stale — unbinding with remove=true")
                 runCatching { Shizuku.unbindUserService(args, this, /* remove = */ true) }
-                _service.value = null
+                _health.value = DaemonHealth.Stale
                 return
             }
-            _service.value = svc
+            _health.value = DaemonHealth.Bound(svc)
         }
         override fun onServiceDisconnected(name: ComponentName) {
             L.w("Shizuku", "onServiceDisconnected")
-            _service.value = null
+            recompute()
         }
     }
 
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, result ->
+        recompute()
         if (result == PackageManager.PERMISSION_GRANTED) {
-            _state.value = ShizukuState.Ready
             permissionContinuation?.resume(true)
         } else {
-            _state.value = ShizukuState.Denied
             permissionContinuation?.resume(false)
         }
         permissionContinuation = null
     }
 
-    private val binderReceivedListener = Shizuku.OnBinderReceivedListener { refresh() }
-    private val binderDeadListener = Shizuku.OnBinderDeadListener {
-        _state.value = ShizukuState.NotRunning
-        _service.value = null
-    }
+    private val binderReceivedListener = Shizuku.OnBinderReceivedListener { recompute() }
+    private val binderDeadListener = Shizuku.OnBinderDeadListener { recompute() }
 
     @Volatile private var permissionContinuation: kotlin.coroutines.Continuation<Boolean>? = null
 
@@ -86,7 +82,7 @@ class ShizukuClient(private val ctx: Context) {
         Shizuku.addRequestPermissionResultListener(permissionListener)
         Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
         Shizuku.addBinderDeadListener(binderDeadListener)
-        refresh()
+        recompute()
     }
 
     fun detach() {
@@ -95,25 +91,40 @@ class ShizukuClient(private val ctx: Context) {
         Shizuku.removeBinderDeadListener(binderDeadListener)
     }
 
-    /** Re-evaluate Shizuku presence + permission. Cheap; safe to call often. */
-    fun refresh() {
+    /** Re-derive [health] from current Shizuku/binding state. Idempotent; safe to call often. */
+    fun recompute() {
+        val current = _health.value
+        // If we have a live Bound, keep it — onServiceDisconnected will replace.
+        if (current is DaemonHealth.Bound) return
+
         val s = when {
-            !Shizuku.pingBinder() -> ShizukuState.NotRunning
-            @Suppress("DEPRECATION") Shizuku.isPreV11() -> ShizukuState.Outdated
-            Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED ->
-                ShizukuState.Ready
-            Shizuku.shouldShowRequestPermissionRationale() -> ShizukuState.Denied
-            else -> ShizukuState.NeedPermission
+            !Shizuku.pingBinder() -> DaemonHealth.NotRunning
+            @Suppress("DEPRECATION") Shizuku.isPreV11() -> DaemonHealth.NotRunning
+            Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED -> DaemonHealth.NoPermission
+            else -> {
+                runCatching { Shizuku.bindUserService(args, conn) }
+                    .onFailure { L.e("Shizuku", "bindUserService threw", it) }
+                current  // keep current until onServiceConnected fires
+            }
         }
-        if (_state.value != s) L.i("Shizuku", "state ${_state.value} → $s")
-        _state.value = s
+        if (_health.value != s) {
+            L.i("Shizuku", "health ${_health.value} → $s")
+            _health.value = s
+        }
     }
 
-    /**
-     * Trigger Shizuku's permission dialog. Suspends until the listener fires.
-     * Cancellation is best-effort: the dialog is system-owned, but we drop
-     * the continuation so any subsequent grant/deny is ignored.
-     */
+    /** Verify a currently-Bound daemon still answers AIDL. Call from RESUMED lifecycle. */
+    suspend fun verifyHealth() {
+        val bound = _health.value as? DaemonHealth.Bound ?: return
+        val ok = withContext(Dispatchers.IO) {
+            runCatching { bound.service.version == USER_SERVICE_VERSION }.getOrDefault(false)
+        }
+        if (!ok) {
+            L.w("Shizuku", "verifyHealth ping failed — marking Unhealthy")
+            _health.value = DaemonHealth.Unhealthy("ping failed")
+        }
+    }
+
     suspend fun requestPermission(): Boolean = suspendCancellableCoroutine { cont ->
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
             cont.resume(true); return@suspendCancellableCoroutine
@@ -123,29 +134,17 @@ class ShizukuClient(private val ctx: Context) {
         cont.invokeOnCancellation { permissionContinuation = null }
     }
 
-    /** Bind the user-service. No-op if already bound. */
-    fun bind() {
-        if (_service.value != null) { L.v("Shizuku", "bind: already bound"); return }
-        if (_state.value != ShizukuState.Ready) { L.w("Shizuku", "bind skipped, state=${_state.value}"); return }
-        L.i("Shizuku", "bindUserService → starting daemon")
-        runCatching { Shizuku.bindUserService(args, conn) }
-            .onFailure { L.e("Shizuku", "bindUserService threw", it) }
-    }
+    fun bind() = recompute()
 
-    /**
-     * Release the binder reference but **keep the daemon alive** (`remove =
-     * false`) so the next bind reuses the warm process. Pass `remove = true`
-     * to tear it down — used during uninstall flows or version mismatch.
-     */
     fun unbind(remove: Boolean = false) {
         runCatching { Shizuku.unbindUserService(args, conn, remove) }
-        _service.value = null
+        _health.value = if (Shizuku.pingBinder()) DaemonHealth.NoPermission else DaemonHealth.NotRunning
     }
+
+    fun refresh() = recompute()
 
     companion object {
         private const val REQUEST_CODE = 0xCA11
-        // Must match userservice/build.gradle.kts → userServiceVersion.
-        // Bump together when the AIDL contract or service semantics change.
         private const val USER_SERVICE_VERSION = 12
     }
 }
