@@ -98,7 +98,6 @@
     <string name="rec_status_active_single_full">Чути обох в одній доріжці</string>
     <string name="rec_status_active_mic_only">Чути лише вас — пристрій блокує другу сторону</string>
     <string name="rec_status_failed_silence">На цьому пристрої жодне джерело не дало звуку</string>
-    <string name="rec_status_failed_other">Не вдалося розпочати запис</string>
     <string name="rec_quality_excellent">Найкраща якість</string>
     <string name="rec_quality_good">Хороша якість</string>
     <string name="rec_quality_partial">Часткова якість</string>
@@ -187,6 +186,5 @@
     <string name="settings_cleanup_applied">При запуску старі записи будуть видалені автоматично</string>
 
     <!-- Errors -->
-    <string name="err_shizuku_not_running">Shizuku-сервіс не запущений</string>
     <string name="err_shizuku_denied">Дозвіл відхилено</string>
 </resources>

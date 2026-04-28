@@ -154,6 +154,11 @@ internal class AudioRecorderJob(
         if (!running.compareAndSet(true, false)) return
         runCatching { record?.stop() }
         thread?.let { runCatching { it.join(joinMs) } }
+        // force-close pipe to break a pump stuck in out.write — without this it would zombie with the FD
+        if (thread?.isAlive == true) {
+            runCatching { outFd.close() }
+            thread?.let { runCatching { it.join(joinMs) } }
+        }
         thread = null
         runCatching { record?.release() }
         record = null

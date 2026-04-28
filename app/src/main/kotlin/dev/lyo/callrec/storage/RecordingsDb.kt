@@ -84,32 +84,49 @@ interface CallDao {
     suspend fun deleteAll(ids: List<String>)
 
     /**
-     * Cleanup helper — return all non-favourite recordings sorted oldest-first.
-     * The size-cap policy walks this list and stops once enough has been
-     * pruned to fit under the cap.
+     * Cleanup helper — return all non-favourite **finalised** recordings,
+     * sorted oldest-first. Rows whose `ended_at` is still NULL are skipped:
+     * they belong to an in-flight or just-crashed recording whose finaliser
+     * may still be writing the moov atom or rewriting the WAV header. The
+     * size-cap policy walks this list.
      */
-    @Query("SELECT * FROM calls WHERE favorite = 0 ORDER BY started_at ASC")
+    @Query("SELECT * FROM calls WHERE favorite = 0 AND ended_at IS NOT NULL ORDER BY started_at ASC")
     suspend fun selectOldestNotFavorite(): List<CallRecord>
 
     /**
-     * Cleanup helper — return non-favourite recordings older than the cutoff
-     * (UTC ms). Used by the max-age policy. Favourites are never returned so
-     * the caller never has to filter them again.
+     * Cleanup helper — return non-favourite **finalised** recordings older
+     * than the cutoff (UTC ms). Used by the max-age policy.
+     *
+     * The `ended_at IS NOT NULL` guard is load-bearing: an OEM Doze restart
+     * mid-call leaves a row with `started_at` long ago and `ended_at = null`;
+     * without this filter, cleanup would pick that row and delete its file
+     * while the encoder may still be flushing the trailer.
      */
-    @Query("SELECT * FROM calls WHERE favorite = 0 AND started_at < :cutoffMs ORDER BY started_at ASC")
+    @Query("SELECT * FROM calls WHERE favorite = 0 AND ended_at IS NOT NULL AND started_at < :cutoffMs ORDER BY started_at ASC")
     suspend fun selectOlderThan(cutoffMs: Long): List<CallRecord>
 
     /**
-     * Bulk-delete non-favourite rows older than [cutoffMs]. Returns the
-     * number of rows actually removed (Room exposes the SQLite changes()
+     * Bulk-delete non-favourite finalised rows older than [cutoffMs]. Returns
+     * the number of rows actually removed (Room exposes the SQLite changes()
      * count from a `DELETE` query).
      *
      * NOTE: this method does NOT touch the on-disk audio files — the caller
      * must select the rows first (via [selectOlderThan]), delete the files
      * with `BulkOps.deleteFiles`, and only then issue the row delete.
      */
-    @Query("DELETE FROM calls WHERE favorite = 0 AND started_at < :cutoffMs")
+    @Query("DELETE FROM calls WHERE favorite = 0 AND ended_at IS NOT NULL AND started_at < :cutoffMs")
     suspend fun deleteOlderThan(cutoffMs: Long): Int
+
+    /**
+     * All finalised recordings — used by the startup reconciliation pass to
+     * detect rows whose audio files were deleted out-of-band (e.g. via a file
+     * manager) and prune the dangling DB rows.
+     *
+     * Excludes in-flight rows so a process-restart-mid-recording recovery is
+     * not mistaken for a "file missing" desync.
+     */
+    @Query("SELECT * FROM calls WHERE ended_at IS NOT NULL")
+    suspend fun selectAllFinalised(): List<CallRecord>
 }
 
 // v1→v2: introduces the favorite column. Default 0 keeps existing rows un-starred.

@@ -4,9 +4,9 @@ package dev.lyo.callrec.permissions
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.net.toUri
 
 /**
  * Samsung One UI / Pixel Doze: any "background activity restriction" turns
@@ -36,7 +36,7 @@ object BatteryOptimizations {
     @SuppressLint("BatteryLife")
     fun requestExemption(ctx: Context) {
         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-            .setData(Uri.parse("package:${ctx.packageName}"))
+            .setData("package:${ctx.packageName}".toUri())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (runCatching { ctx.startActivity(intent) }.isSuccess) return
         // Fallback: the per-app battery settings page where users can flip

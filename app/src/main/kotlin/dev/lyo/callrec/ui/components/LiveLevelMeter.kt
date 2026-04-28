@@ -55,8 +55,8 @@ fun LiveLevelMeter(
     label: String,
     rms: Float,
     color: Color,
-    disabled: Boolean = false,
     modifier: Modifier = Modifier,
+    disabled: Boolean = false,
 ) {
     val history = remember { mutableStateListOf<Float>().apply { repeat(32) { add(0f) } } }
 

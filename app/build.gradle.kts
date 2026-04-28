@@ -103,7 +103,12 @@ android {
     lint {
         warningsAsErrors = false
         abortOnError = true
-        disable += setOf("MissingTranslation", "ExtraTranslation")
+        // ObsoleteSdkInt: the adaptive-icon mipmap-anydpi-v26 qualifier is
+        // technically obsolete at minSdk=31, but AAPT2 still resolves icons
+        // through it for adaptive XML resources — dropping the qualifier
+        // breaks resource linking. Suppress the warning rather than the
+        // resource directory.
+        disable += setOf("MissingTranslation", "ExtraTranslation", "ObsoleteSdkInt")
     }
 }
 

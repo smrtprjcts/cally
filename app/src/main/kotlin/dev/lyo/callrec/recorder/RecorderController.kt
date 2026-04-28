@@ -91,6 +91,7 @@ class RecorderController(
     @Volatile private var downlinkMeter: AudioLevelMeter? = null
     @Volatile private var activeOutcome: Outcome? = null
     @Volatile private var stopping = false
+    @Volatile private var bailedOnDeadDaemon = false
 
     fun setSampleRate(hz: Int) { sampleRate = hz }
 
@@ -114,6 +115,7 @@ class RecorderController(
             return
         }
         stopping = false
+        bailedOnDeadDaemon = false
 
         val caps = capabilities.current() ?: Capabilities(android.os.Build.FINGERPRINT, null)
         L.i("Recorder", "caps preferred=${caps.preferredStrategy?.name ?: "-"} silent=${caps.knownSilent.map { it.name }} failedInit=${caps.knownFailedInit.map { it.name }}")
@@ -129,11 +131,16 @@ class RecorderController(
         L.i("Recorder", "callId=$callId ladder=${ladder.map { it.name }}")
 
         for (strategy in ladder) {
+            if (bailedOnDeadDaemon) return
             if (stopping) return
             _state.value = RecordingState.Probing(strategy)
             L.d("Recorder", "trying ${strategy.name}…")
             val attempt = openStrategy(svc, callId, strategy)
             if (attempt == null) {
+                // Daemon-binder death is NOT a real init failure — don't
+                // poison the capability cache (otherwise the strategy that
+                // was actually working gets blacklisted on the next call).
+                if (bailedOnDeadDaemon) return
                 val daemonErr = runCatching { svc.lastError }.getOrNull().orEmpty()
                 L.w("Recorder", "${strategy.name} init FAILED. daemon=$daemonErr")
                 capabilities.update { it.copy(knownFailedInit = it.knownFailedInit + strategy) }
@@ -246,6 +253,12 @@ class RecorderController(
 
         val mask = try {
             svc.startDualRecord(strategy.uplinkSource!!, strategy.downlinkSource!!, sampleRate, upWrite, dnWrite)
+        } catch (e: android.os.DeadObjectException) {
+            _state.value = RecordingState.Failed("Shizuku daemon disconnected — retry")
+            bailedOnDeadDaemon = true
+            runCatching { upWrite.close() }; runCatching { dnWrite.close() }
+            runCatching { upRead.close() }; runCatching { dnRead.close() }
+            return null
         } catch (_: Throwable) { 0 }
         runCatching { upWrite.close() }; runCatching { dnWrite.close() }
 
@@ -275,6 +288,12 @@ class RecorderController(
         val channelMask = if (strategy.stereo) AudioFormat.CHANNEL_IN_STEREO else AudioFormat.CHANNEL_IN_MONO
         val ok = try {
             svc.startSingleRecord(strategy.singleSource!!, sampleRate, channelMask, write)
+        } catch (e: android.os.DeadObjectException) {
+            _state.value = RecordingState.Failed("Shizuku daemon disconnected — retry")
+            bailedOnDeadDaemon = true
+            runCatching { write.close() }
+            runCatching { read.close() }
+            return null
         } catch (_: Throwable) { 0 }
         runCatching { write.close() }
 
@@ -410,7 +429,8 @@ class RecorderController(
 
     private fun teardown() {
         // Pumps drain on EOF (UserService closed write end).
-        pumpThreads.forEach { runCatching { it.join(2_000) } }
+        // 5s gives encoder.close()'s muxer.stop() time to write the moov atom on slow storage
+        pumpThreads.forEach { runCatching { it.join(5_000) } }
         pumpThreads.clear()
         uplinkMeter = null
         downlinkMeter = null
@@ -422,10 +442,13 @@ class RecorderController(
         channels: Int,
         meter: AudioLevelMeter,
     ): Thread = Thread({
-        val encoder = newEncoder(file).apply { open(sampleRate, channels) }
-        val input = FileInputStream(pfd.fileDescriptor)
-        val buf = ByteArray(8 * 1024)
+        var encoder: PcmEncoder? = null
+        var input: FileInputStream? = null
         try {
+            // open() can throw on cut-down ROMs; finally must still close the pipe so the daemon's pump stops blocking on the read end
+            encoder = newEncoder(file).also { it.open(sampleRate, channels) }
+            input = FileInputStream(pfd.fileDescriptor)
+            val buf = ByteArray(8 * 1024)
             while (true) {
                 val n = input.read(buf)
                 if (n <= 0) break
@@ -433,8 +456,8 @@ class RecorderController(
                 meter.update(buf, 0, n)
             }
         } finally {
-            runCatching { encoder.close() }
-            runCatching { input.close() }
+            runCatching { encoder?.close() }
+            runCatching { input?.close() }
             runCatching { pfd.close() }
         }
     }, "callrec-pump-${file.tag}").apply { isDaemon = true }

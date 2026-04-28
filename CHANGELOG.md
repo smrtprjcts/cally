@@ -8,9 +8,25 @@
 - First-run legal disclaimer (ModalBottomSheet) з 3-tier таксономією юрисдикцій: (1) one-party consent — без сповіщення, (2) all-party + implied consent — достатньо попередити, (3) explicit consent — потрібна явна згода (DE/AT/BE). Кожен tier розгортається тапом, відкриваючи legal references (§ 201 StGB, 18 U.S.C. § 2511, CA Penal Code § 632 тощо). Завжди видимий tech-блок про неможливість beep-сповіщення через uplink.
 - Settings → Про додаток → "Юридичне попередження" — повторне відкриття того самого sheet'а як read-only.
 - Версійований DataStore-флаг `disclaimer_accepted_v1` для майбутнього re-prompt при істотних змінах тексту.
+- WAV encoder перезаписує RIFF-хедер кожен ~1 МБ — hard-killed запис залишається відтворюваним.
+- DB↔FS reconciliation pass позначає записи, чий аудіофайл був видалений поза додатком.
+- Cloud STT API ключ зашифрований at rest через Android Keystore-backed AES/GCM.
 
 ### Змінено
 - README: секцію «Користувачам поза Україною» переписано в 3-tier структуру (без сповіщення / достатньо попередити / explicit consent) з матрицею-резюме «що дозволено в кожному рівні».
+- Номери телефонів і контактні імена більше не з'являються у release logcat на рівні INFO (тільки DEBUG).
+- AAC encoder ретраїть EOS input slot до 5 разів під час close — moov atom MP4-контейнера тепер завжди записується.
+- Recorder pump joins подовжено до 5 с; якщо pump усе ще заблокований — pipe FD force-close.
+- Strategy ladder чесно завершується, коли Shizuku daemon binder вмирає посеред спроби, замість рапортувати "all silent".
+
+### Виправлено
+- Release-білди тепер активують verifyCaller signing-cert pin (signingSha256 раніше був порожній).
+- Cleanup-запити пропускають записи, що ще тривають (ended_at IS NULL).
+- WRITE_SECURE_SETTINGS прибрано з UserService grant allow-list — у v0.2.0 жоден шлях його не використовує.
+- Strategy ladder більше не поміщає робочу стратегію у `knownFailedInit`, коли Shizuku daemon binder вмер посеред спроби — кеш вибору залишається валідним.
+
+### UserService
+- `userServiceVersion` 10 → 11. AudioRecorderJob.stop() тепер force-close pipe FD при таймауті join, і RecorderService прибрав `WRITE_SECURE_SETTINGS` з allow-list. Daemon з `daemon=true` після оновлення APK respawn'иться автоматично через version mismatch у `ShizukuClient.onServiceConnected`.
 
 ### Заплановано
 - SAF integration (`OpenDocumentTree` + MediaStore mirror)

@@ -2,6 +2,7 @@
 package dev.lyo.callrec.permissions
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -22,6 +23,7 @@ import androidx.core.content.ContextCompat
  */
 object AppPermissions {
     val RECORD_AUDIO = Manifest.permission.RECORD_AUDIO
+    @SuppressLint("InlinedApi")
     val POST_NOTIFICATIONS = Manifest.permission.POST_NOTIFICATIONS
     val READ_PHONE_STATE = Manifest.permission.READ_PHONE_STATE
     val READ_CALL_LOG = Manifest.permission.READ_CALL_LOG

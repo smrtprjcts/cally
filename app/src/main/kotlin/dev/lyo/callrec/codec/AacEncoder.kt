@@ -22,6 +22,7 @@ class AacEncoder(private val file: RecordingFile) : PcmEncoder {
     private lateinit var codec: MediaCodec
     private lateinit var muxer: MediaMuxer
     private val bufferInfo = MediaCodec.BufferInfo()
+    @Volatile private var failed = false
 
     private var sampleRate = 0
     private var channels = 0
@@ -44,15 +45,21 @@ class AacEncoder(private val file: RecordingFile) : PcmEncoder {
             setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
             setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16 * 1024)
         }
-        codec = MediaCodec.createEncoderByType(MIME_AAC).apply {
-            configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            start()
+        try {
+            codec = MediaCodec.createEncoderByType(MIME_AAC).apply {
+                configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+                start()
+            }
+            muxer = MediaMuxer(file.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            L.d("AacEncoder", "open ${file.path} ${sampleRateHz}Hz ch=$channelCount @${bitrate}bps")
+        } catch (t: Throwable) {
+            failed = true
+            L.w("AacEncoder", "AacEncoder.open failed", t)
         }
-        muxer = MediaMuxer(file.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        L.d("AacEncoder", "open ${file.path} ${sampleRateHz}Hz ch=$channelCount @${bitrate}bps")
     }
 
     override fun writePcm(buf: ByteArray, off: Int, len: Int) {
+        if (failed) return
         if (len <= 0) return
         var written = 0
         while (written < len) {
@@ -76,9 +83,15 @@ class AacEncoder(private val file: RecordingFile) : PcmEncoder {
     }
 
     override fun close() {
+        if (failed) return
         try {
-            // Send EOS through an empty input buffer, then drain until done.
-            val idx = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US * 4)
+            var idx = -1
+            var attempts = 0
+            while (idx < 0 && attempts < 5) {
+                idx = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US)
+                if (idx < 0) drain(endOfStream = false)
+                attempts++
+            }
             if (idx >= 0) {
                 val pts = totalPcmFrames * 1_000_000L / sampleRate
                 codec.queueInputBuffer(idx, 0, 0, pts, MediaCodec.BUFFER_FLAG_END_OF_STREAM)

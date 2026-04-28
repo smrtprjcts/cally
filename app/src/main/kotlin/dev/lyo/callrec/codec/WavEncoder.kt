@@ -24,6 +24,7 @@ class WavEncoder(private val file: RecordingFile) : PcmEncoder {
     private var sampleRate = 0
     private var channels = 0
     private var dataBytes = 0L
+    private var bytesSinceHeaderRefresh = 0L
 
     override fun open(sampleRateHz: Int, channelCount: Int) {
         require(sampleRateHz > 0) { "sampleRate must be positive" }
@@ -40,6 +41,16 @@ class WavEncoder(private val file: RecordingFile) : PcmEncoder {
         if (len <= 0) return
         raf.write(buf, off, len)
         dataBytes += len
+        bytesSinceHeaderRefresh += len
+        // header refreshed periodically so a hard kill leaves a playable file
+        if (bytesSinceHeaderRefresh >= HEADER_REFRESH_INTERVAL_BYTES) {
+            val savedPos = raf.filePointer
+            raf.seek(0)
+            val truncated = dataBytes.coerceAtMost(0xFFFFFFFFL).toInt()
+            raf.write(buildHeader(dataLen = truncated))
+            raf.seek(savedPos)
+            bytesSinceHeaderRefresh = 0L
+        }
     }
 
     override fun close() {
@@ -77,5 +88,9 @@ class WavEncoder(private val file: RecordingFile) : PcmEncoder {
             put("data".toByteArray(Charsets.US_ASCII))
             putInt(dataLen)
         }.array()
+    }
+
+    private companion object {
+        const val HEADER_REFRESH_INTERVAL_BYTES = 1L * 1024 * 1024
     }
 }

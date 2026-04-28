@@ -31,7 +31,10 @@ class CallStateReceiver : BroadcastReceiver() {
         if (intent.action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) return
         val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
         val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-        L.i("Receiver", "PHONE_STATE → $state${number?.let { " ($it)" } ?: ""}")
+        // INFO logs ship in release; never put the number on this line. Anyone
+        // with READ_LOGS (root, dev tools, bugreport) can scrape them otherwise.
+        L.i("Receiver", "PHONE_STATE → $state${if (number.isNullOrBlank()) "" else " (number present)"}")
+        if (!number.isNullOrBlank()) L.d("Receiver", "  number=$number")
         when (state) {
             TelephonyManager.EXTRA_STATE_OFFHOOK,
             TelephonyManager.EXTRA_STATE_RINGING -> {

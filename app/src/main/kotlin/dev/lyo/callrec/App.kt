@@ -6,6 +6,7 @@ import android.util.Log
 import dev.lyo.callrec.cleanup.CleanupJob
 import dev.lyo.callrec.di.AppContainer
 import dev.lyo.callrec.notify.NotificationChannels
+import java.io.File
 import kotlinx.coroutines.launch
 
 class App : Application() {
@@ -44,6 +45,28 @@ class App : Application() {
             runCatching { CleanupJob.runOnce(container.settings, container.db) }
                 .onFailure { Log.w("Callrec", "[App] cleanup failed: ${it.message}", it) }
         }
+        // Reconcile DB rows against the filesystem: if the user (or another
+        // app) removed an audio file out-of-band, the row would otherwise
+        // sit forever and tap-to-play would silently no-op. Only finalised
+        // rows are scanned so an in-flight recording is never mistaken for
+        // a desync.
+        container.appScope.launch {
+            runCatching { reconcileMissingFiles() }
+                .onFailure { Log.w("Callrec", "[App] reconcile failed: ${it.message}", it) }
+        }
         Log.i("Callrec", "[App] onCreate done (Shizuku pre-warm queued)")
+    }
+
+    private suspend fun reconcileMissingFiles() {
+        val dao = container.db.calls()
+        val rows = dao.selectAllFinalised()
+        val orphans = rows.filter { rec ->
+            val upGone = !File(rec.uplinkPath).exists()
+            val dnGone = rec.downlinkPath?.let { !File(it).exists() } ?: true
+            upGone && dnGone
+        }
+        if (orphans.isEmpty()) return
+        Log.i("Callrec", "[App] reconcile: pruning ${orphans.size} row(s) with missing audio")
+        dao.deleteAll(orphans.map { it.callId })
     }
 }

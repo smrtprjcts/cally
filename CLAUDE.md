@@ -69,7 +69,7 @@ User-configurable cloud STT — окей (вони самі вирішили, в
 adb logcat -s RecorderController RecorderService AudioRecorderJob  # bypass debugging
 ```
 
-JDK 21 toolchain (auto-provisioned через foojay resolver). Gradle 8.11 + AGP 8.8 + Kotlin 2.1.20 (K2). KSP не kapt.
+JDK 21 toolchain (auto-provisioned через foojay resolver). Gradle 8.11.1 + AGP 8.9.1 + Kotlin 2.1.20 (K2). KSP не kapt.
 
 ## Code style
 
@@ -97,7 +97,7 @@ JDK 21 toolchain (auto-provisioned через foojay resolver). Gradle 8.11 + AG
 
 **Повні правила — у [`RELEASING.md`](RELEASING.md). Не імпровізуйте.**
 
-Поточна версія: `versionCode = 1`, `versionName = "0.1.0"`, `userServiceVersion = 10`.
+Поточна версія: `versionCode = 1`, `versionName = "0.1.0"`, `userServiceVersion = 11`.
 
 Стислі обов'язкові правила:
 

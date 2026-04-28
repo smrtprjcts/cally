@@ -2,7 +2,6 @@
 package dev.lyo.callrec.ui.onboarding
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -62,6 +61,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.provider.Settings
+import androidx.core.net.toUri
 import dev.lyo.callrec.R
 import dev.lyo.callrec.di.AppContainer
 import dev.lyo.callrec.permissions.AppPermissions
@@ -192,7 +192,7 @@ fun OnboardingScreen(
                     {
                         val intent = Intent(
                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            Uri.parse("package:${ctx.packageName}"),
+                            "package:${ctx.packageName}".toUri(),
                         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { ctx.startActivity(intent) }
                     }
@@ -322,9 +322,9 @@ private fun openShizukuStorePage(ctx: android.content.Context) {
     // Try Play Store first; if not present (de-Googled devices), fall back to
     // Shizuku's official site.
     val pkg = "moe.shizuku.privileged.api"
-    val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
+    val market = Intent(Intent.ACTION_VIEW, "market://details?id=$pkg".toUri())
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download"))
+    val web = Intent(Intent.ACTION_VIEW, "https://shizuku.rikka.app/download".toUri())
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     runCatching { ctx.startActivity(market) }.onFailure {
         runCatching { ctx.startActivity(web) }

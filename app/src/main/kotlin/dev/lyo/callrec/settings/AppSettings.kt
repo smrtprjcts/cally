@@ -54,8 +54,16 @@ class AppSettings(private val store: DataStore<Preferences>) {
     }
     suspend fun setSttBaseUrl(v: String) = store.edit { it[KEY_STT_BASE_URL] = v }
 
-    val sttApiKey: Flow<String> = store.data.map { it[KEY_STT_API_KEY] ?: "" }
-    suspend fun setSttApiKey(v: String) = store.edit { it[KEY_STT_API_KEY] = v }
+    // Stored encrypted via Android Keystore-backed AES/GCM (see CryptoBox);
+    // legacy plaintext keys load via passthrough until the next save re-encrypts.
+    val sttApiKey: Flow<String> = store.data.map {
+        val raw = it[KEY_STT_API_KEY] ?: ""
+        if (raw.isBlank()) "" else dev.lyo.callrec.core.CryptoBox.decryptOrPassthrough(raw)
+    }
+    suspend fun setSttApiKey(v: String) = store.edit {
+        if (v.isBlank()) it.remove(KEY_STT_API_KEY)
+        else it[KEY_STT_API_KEY] = dev.lyo.callrec.core.CryptoBox.encrypt(v)
+    }
 
     val sttModel: Flow<String> = store.data.map { it[KEY_STT_MODEL] ?: DEFAULT_STT_MODEL }
     suspend fun setSttModel(v: String) = store.edit { it[KEY_STT_MODEL] = v }

@@ -260,7 +260,10 @@ class CallMonitorService : LifecycleService() {
                     if (!num.isNullOrBlank()) {
                         val name = ContactResolver.resolveName(appCtx, num)
                         container.db.calls().updateContact(id, num, name)
-                        L.i("Service", "post-mortem contact resolved: $num / ${name ?: "<no name>"}")
+                        // INFO ships in release — keep the number/name out, log
+                        // only that resolution succeeded. Full detail at DEBUG.
+                        L.i("Service", "post-mortem contact resolved: ${if (name != null) "with name" else "number-only"}")
+                        L.d("Service", "  num=$num name=${name ?: "<no name>"}")
                     } else {
                         L.d("Service", "post-mortem CallLog returned no row")
                     }

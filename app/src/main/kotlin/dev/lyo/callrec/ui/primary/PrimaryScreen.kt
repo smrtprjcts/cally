@@ -4,7 +4,6 @@ package dev.lyo.callrec.ui.primary
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -99,6 +98,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import dev.lyo.callrec.R
 import dev.lyo.callrec.contacts.ContactResolver
 import dev.lyo.callrec.di.AppContainer
@@ -939,7 +939,7 @@ private fun ContactAvatar(
         }
         value = withContext(Dispatchers.IO) {
             runCatching {
-                ctx.contentResolver.openInputStream(Uri.parse(u))?.use {
+                ctx.contentResolver.openInputStream(u.toUri())?.use {
                     BitmapFactory.decodeStream(it)
                 }
             }.getOrNull()

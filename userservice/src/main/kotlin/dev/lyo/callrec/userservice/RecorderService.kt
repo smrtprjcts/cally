@@ -290,7 +290,6 @@ class RecorderService : IRecorderService.Stub() {
          */
         private val ALLOWED_GRANT_PERMS = setOf(
             "android.permission.READ_LOGS",
-            "android.permission.WRITE_SECURE_SETTINGS",
         )
         private val HEX = "0123456789abcdef".toCharArray()
     }

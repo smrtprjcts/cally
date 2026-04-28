@@ -1,3 +1,7 @@
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -15,8 +19,44 @@ val appPackageId = "dev.lyo.callrec"
 // Bump on every change to RecorderService / AudioRecorderJob / verifyCaller —
 // the Shizuku daemon (daemon=true) checks this and respawns if its in-memory
 // version differs from the freshly-installed APK's version.
-val userServiceVersion = 10
-val signingSha256 = providers.gradleProperty("callrec.signingSha256").orElse("").get()
+//
+// 11: AudioRecorderJob.stop() now force-closes outFd on join timeout
+//     (pipe-write watchdog) and RecorderService removed WRITE_SECURE_SETTINGS
+//     from grantPermission's allow-list. Both change daemon behaviour
+//     observable across the AIDL boundary, so an in-flight v10 daemon must
+//     respawn against a v11 APK.
+val userServiceVersion = 11
+
+// Auto-derive the release certificate's SHA-256 from the keystore so the
+// verifyCaller() pin always matches the APK we just signed — without forcing
+// the developer to copy a hex string into a separate property. Manual override
+// via `signingSha256=…` in keystore.properties wins if present (useful when
+// the keystore lives elsewhere or is hardware-backed and not loadable here).
+// Empty result → debug build → verifyCaller short-circuits, which is
+// intentional for sideloaded development APKs.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val signingSha256: String = run {
+    keystoreProps.getProperty("signingSha256")?.takeIf { it.isNotBlank() }?.let { return@run it }
+    val storeFile = keystoreProps.getProperty("storeFile") ?: return@run ""
+    val storePassword = keystoreProps.getProperty("storePassword") ?: return@run ""
+    val keyAlias = keystoreProps.getProperty("keyAlias") ?: return@run ""
+    val ksFile = rootProject.file(storeFile)
+    if (!ksFile.exists()) return@run ""
+    // PKCS12 first (modern keytool default since JDK 9), JKS as legacy fallback.
+    val ks: KeyStore? = sequenceOf("PKCS12", "JKS").mapNotNull { type ->
+        runCatching {
+            KeyStore.getInstance(type).apply {
+                ksFile.inputStream().use { load(it, storePassword.toCharArray()) }
+            }
+        }.getOrNull()
+    }.firstOrNull()
+    val cert = ks?.getCertificate(keyAlias) ?: return@run ""
+    MessageDigest.getInstance("SHA-256").digest(cert.encoded)
+        .joinToString("") { "%02x".format(it) }
+}
 
 android {
     namespace = "dev.lyo.callrec.userservice"
