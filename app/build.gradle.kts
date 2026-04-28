@@ -123,6 +123,7 @@ dependencies {
     implementation(libs.androidx.media)
     implementation(libs.bundles.lifecycle)
     implementation(libs.androidx.lifecycle.service)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.navigation.compose)
 
     // Compose
