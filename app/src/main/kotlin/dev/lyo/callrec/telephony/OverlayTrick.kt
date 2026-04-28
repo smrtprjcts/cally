@@ -27,9 +27,9 @@ import dev.lyo.callrec.core.L
  * `startForegroundService(type=microphone)`. After ~3 s the overlay is
  * removed; the FGS is now alive in its own right and survives.
  *
- * Caller flow:
- *   if (OverlayTrick.canShow(ctx)) OverlayTrick.briefly(ctx)
- *   ContextCompat.startForegroundService(ctx, intent)
+ * Caller flow (see CallStateReceiver):
+ *   check [canShow] first; if missing, notify the user and skip FGS.
+ *   if canShow: [briefly] then startForegroundService.
  */
 object OverlayTrick {
 
@@ -39,14 +39,12 @@ object OverlayTrick {
     fun canShow(ctx: Context): Boolean = Settings.canDrawOverlays(ctx)
 
     /**
-     * Add an invisible overlay synchronously and schedule its removal. Safe
-     * to call from a BroadcastReceiver. No-ops if the permission is missing.
+     * Add an invisible overlay synchronously and schedule its removal.
+     * Caller MUST verify [canShow] before calling — this function does not
+     * silently no-op anymore; it'd be a contract violation.
      */
     fun briefly(ctx: Context) {
-        if (!canShow(ctx)) {
-            L.w("Overlay", "canDrawOverlays=false — skipping (FGS will likely be denied)")
-            return
-        }
+        check(canShow(ctx)) { "OverlayTrick.briefly called without canShow=true" }
         val app = ctx.applicationContext
         val wm = app.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
         val view = View(app).apply {

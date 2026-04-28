@@ -6,8 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
+import androidx.core.content.getSystemService
 import dev.lyo.callrec.App
 import dev.lyo.callrec.core.L
+import dev.lyo.callrec.notify.NotificationChannels
+import dev.lyo.callrec.ui.MainActivity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -60,6 +63,33 @@ class CallStateReceiver : BroadcastReceiver() {
                         // via the overlay trick — without it, Android 14+
                         // rejects FGS_TYPE start from a manifest receiver.
                         // Cheap (1×1 px, transparent, removed after ~3 s).
+                        if (!OverlayTrick.canShow(ctx)) {
+                            L.w("Receiver", "overlay permission missing — FGS will likely be denied")
+                            // Surface to user via the existing status notification channel.
+                            val nm = ctx.getSystemService<android.app.NotificationManager>()
+                            nm?.let {
+                                val tap = android.app.PendingIntent.getActivity(
+                                    ctx, 0,
+                                    Intent(ctx, MainActivity::class.java).addFlags(
+                                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                                    ),
+                                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                                        android.app.PendingIntent.FLAG_IMMUTABLE,
+                                )
+                                val notif = androidx.core.app.NotificationCompat
+                                    .Builder(ctx, NotificationChannels.ID_STATUS)
+                                    .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                                    .setContentTitle("cally: overlay permission needed")
+                                    .setContentText("Cannot record without it on Android 14+")
+                                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                                    .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE)
+                                    .setContentIntent(tap)
+                                    .setAutoCancel(true)
+                                    .build()
+                                runCatching { it.notify(0xCA13, notif) }
+                            }
+                            return@launch  // skip startForegroundService
+                        }
                         OverlayTrick.briefly(ctx)
                         val svc = Intent(ctx, CallMonitorService::class.java).apply {
                             action = CallMonitorService.ACTION_CALL_START
