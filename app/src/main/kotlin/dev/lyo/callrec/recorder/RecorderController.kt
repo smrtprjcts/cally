@@ -115,6 +115,21 @@ class RecorderController(
             return
         }
         stopping = false
+        // Bypass health gate — refuse early on Failed (avoids cache poison),
+        // proceed but don't mutate cache on Degraded, normal flow on Full.
+        val bypassHealth = try {
+            svc.bypassHealth
+        } catch (_: android.os.RemoteException) {
+            L.e("Recorder", "bypassHealth IPC failed — daemon unreachable")
+            _state.value = RecordingState.Failed("daemon unreachable")
+            return
+        }
+        if (bypassHealth == 0 /* Failed */) {
+            L.e("Recorder", "Bypass non-functional on ${android.os.Build.FINGERPRINT}")
+            _state.value = RecordingState.Failed("Bypass non-functional on this build")
+            return
+        }
+        val mutateCache = bypassHealth == 2 /* Full */
         bailedOnDeadDaemon = false
 
         val caps = capabilities.current() ?: Capabilities(android.os.Build.FINGERPRINT, null)
@@ -143,7 +158,9 @@ class RecorderController(
                 if (bailedOnDeadDaemon) return
                 val daemonErr = runCatching { svc.lastError }.getOrNull().orEmpty()
                 L.w("Recorder", "${strategy.name} init FAILED. daemon=$daemonErr")
-                capabilities.update { it.copy(knownFailedInit = it.knownFailedInit + strategy) }
+                if (mutateCache) {
+                    capabilities.update { it.copy(knownFailedInit = it.knownFailedInit + strategy) }
+                }
                 continue
             }
             L.i("Recorder", "${strategy.name} opened → verifying audibility")
@@ -153,14 +170,16 @@ class RecorderController(
             when (verdict) {
                 Verdict.Audible -> {
                     L.i("Recorder", "${strategy.name} AUDIBLE — adopting (uplink=${uplinkMeter?.lastRms} dn=${downlinkMeter?.lastRms})")
-                    capabilities.update {
-                        it.copy(
-                            preferredStrategy = strategy,
-                            // Recovery: this strategy worked, drop it from
-                            // silence list and reset its strike count.
-                            knownSilent = it.knownSilent - strategy,
-                            silentStrikes = it.silentStrikes - strategy,
-                        )
+                    if (mutateCache) {
+                        capabilities.update {
+                            it.copy(
+                                preferredStrategy = strategy,
+                                // Recovery: this strategy worked, drop it from
+                                // silence list and reset its strike count.
+                                knownSilent = it.knownSilent - strategy,
+                                silentStrikes = it.silentStrikes - strategy,
+                            )
+                        }
                     }
                     return
                 }
@@ -169,7 +188,9 @@ class RecorderController(
                     // Special case: SingleMic is the guaranteed last resort.
                     if (strategy == Strategy.SingleMic) {
                         L.i("Recorder", "SingleMic ambient was quiet but adopting anyway (last-resort)")
-                        capabilities.update { it.copy(preferredStrategy = strategy) }
+                        if (mutateCache) {
+                            capabilities.update { it.copy(preferredStrategy = strategy) }
+                        }
                         return
                     }
                     // Tell the daemon to stop+release this AudioRecord BEFORE
@@ -181,14 +202,16 @@ class RecorderController(
                     // after SILENT_STRIKES_BEFORE_BLACKLIST in a row. One-off
                     // silence on Samsung means "modem hadn't opened the path
                     // yet" — not a permanent capability gap.
-                    capabilities.update { caps ->
-                        val nextStrikes = (caps.silentStrikes[strategy] ?: 0) + 1
-                        val updated = caps.silentStrikes + (strategy to nextStrikes)
-                        caps.copy(
-                            silentStrikes = updated,
-                            knownSilent = if (nextStrikes >= Capabilities.SILENT_STRIKES_BEFORE_BLACKLIST)
-                                caps.knownSilent + strategy else caps.knownSilent,
-                        )
+                    if (mutateCache) {
+                        capabilities.update { caps ->
+                            val nextStrikes = (caps.silentStrikes[strategy] ?: 0) + 1
+                            val updated = caps.silentStrikes + (strategy to nextStrikes)
+                            caps.copy(
+                                silentStrikes = updated,
+                                knownSilent = if (nextStrikes >= Capabilities.SILENT_STRIKES_BEFORE_BLACKLIST)
+                                    caps.knownSilent + strategy else caps.knownSilent,
+                            )
+                        }
                     }
                     teardown()
                     // Drop the just-written silent files — only a couple of
