@@ -64,6 +64,8 @@ class RecorderService : IRecorderService.Stub() {
 
     override fun getVersion(): Int = BuildConfig.VERSION_CODE_USERSERVICE
 
+    // Read-only diagnostic; no verifyCaller() — health value is not sensitive
+    // and gating it would create a chicken-and-egg with debug-build cert pinning.
     override fun getBypassHealth(): Int = when {
         Process.myUid() == 0 -> 2  // root: no bypass needed → trivially Full
         captureContext is WrappedShellContext -> captureContext.health.ordinal

@@ -61,6 +61,16 @@ internal class WrappedShellContext(
 
     private var finalPatchCount: Int = 0
 
+    /**
+     * Coarse health signal exposed to the app via [RecorderService.getBypassHealth].
+     *
+     * `Full` requires all 4 patches applied. `Degraded` means 1-3 of 4 — but note
+     * a sustained `Degraded` reading can mean "all reachable patches applied"
+     * when [Instrumentation.newApplication] returned null (the `mInitialApplication`
+     * patch is conditionally skipped in that case). The app treats `Degraded` as
+     * "proceed but don't poison capability cache", which is correct for both
+     * partial-failure and conditional-skip scenarios.
+     */
     val health: BypassHealth get() = when {
         finalPatchCount == 4 -> BypassHealth.Full
         finalPatchCount > 0 -> BypassHealth.Degraded
