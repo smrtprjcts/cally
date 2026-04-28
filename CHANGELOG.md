@@ -5,18 +5,36 @@
 ## [Unreleased]
 
 ### Додано
--
+- **Bypass-health AIDL signal** — `WrappedShellContext` тепер відстежує покриття reflection-патчів (sCurrentActivityThread / mSystemThread / mInitialApplication / mBoundApplication) як `BypassHealth` enum (Failed / Degraded / Full), доступний через новий AIDL-метод `getBypassHealth() = 4`. Calibration ladder в `RecorderController` більше не отруює `Capabilities` cache strategy-failure'ами коли реальна причина — bypass деградація.
+- **`DaemonHealth` sealed state machine** — заміняє legacy `ShizukuState` enum + окремий `service: StateFlow<IRecorderService?>`. Шість станів: `NotInstalled / NotRunning / NoPermission / Stale / Bound(service) / Unhealthy(reason)`. Single source of truth для всіх UI-та-сервіс споживачів стану Shizuku/UserService.
+- **System notification про daemon health** — нове сповіщення на каналі `callrec.status` з'являється коли `DaemonHealth != Bound` і авто-зникає при відновленні. Tap відкриває setup screen з deep-link state-aware action (`EXTRA_FROM_HEALTH_NOTIF`). VISIBILITY_PRIVATE для privacy.
+- **Adaptive noise floor у `AudioLevelMeter`** — `calibratedFloor` навчається як медіана RMS перших ~500 ms семплів; `isAudible` повертає `lastRms > calibratedFloor + AUDIBLE_DELTA (0.008f)`. Замість фіксованого `AUDIBLE_THRESHOLD = 0.005` — поріг adaptive per-stream.
+- **`OpenResult` sealed type для класифікації failures** в `RecorderController.openStrategy`: `Success(outcome) / InitFailure(reason) / Transient(reason)`. Transient (DeadObjectException / RemoteException / SecurityException) bail'ять без cache mutation.
+- **POST_NOTIFICATIONS opt-in step** в onboarding (Android 13+) — гарантія що daemon health notifications дійсно з'являться користувачу.
+- **Onboarding tip card** з рекомендацією community Shizuku build з auto-restart watchdog (`thedjchi/Shizuku`).
+- **Debug-only `DaemonHealthDebugActivity`** для триаджу device-matrix issues — показує BypassHealth, DaemonHealth, Capabilities cache. У release не входить (`app/src/debug/`).
+- **One-shot health verification на `Lifecycle.State.RESUMED`** через `ProcessLifecycleOwner` — детектить zombie daemon коли користувач відкриває app. Нуль ідл-полінгу (event-driven отбита решта кейсів).
 
 ### Змінено
--
+- `CallMonitorService.kickoff()` тепер чекає `health.filterIsInstance<DaemonHealth.Bound>().first().service` замість роздільних `bind()` + `service.filterNotNull()` — single composite signal who subsumes "bound + version match + permission OK".
+- `recordingStarted` тепер скидається у `try/finally` блоці `kickoff()` при будь-якій помилці (закриває гонку де STICKY restart бачив `recordingStarted=true` після failed kickoff).
+- `OverlayTrick.briefly()` тепер strict-asserts `canShow=true` precondition; перевірка переїхала вище у `CallStateReceiver`, який postить user-visible notification якщо overlay permission відсутній.
+- `RecorderController` calibration writes тепер gated на `mutateCache: Boolean = (bypassHealth == Full)` — на Degraded bypass cache не отруюється.
+- `MainActivity` має `launchMode="singleTop"` + `onNewIntent` обробляє `EXTRA_FROM_HEALTH_NOTIF` тригерячи health re-check.
+
+### Видалено
+- AIDL метод `probeSource = 20` (ніколи не викликався з app — dead surface). Transaction code 20 зарезервовано коментарем.
+- AIDL метод `grantPermission = 30` (ніколи не викликався з app — dead surface). Transaction code 30 зарезервовано коментарем.
+- `ALLOWED_GRANT_PERMS` companion field у `RecorderService`.
+- `READ_LOGS` permission з manifest (тільки `grantPermission` його використовував — обидва видалені).
+- `ShizukuState` enum file (заміщений `DaemonHealth`).
+- Silent no-op branch в `OverlayTrick.briefly` (тепер strict).
+- `bailedOnDeadDaemon: Boolean` flag в `RecorderController` (заміщений семантикою `OpenResult.Transient`).
 
 ### Виправлено
 -
 
 ### Безпека
--
-
-### Видалено
 -
 
 ### Застаріле (Deprecated)
