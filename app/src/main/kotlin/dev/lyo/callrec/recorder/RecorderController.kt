@@ -76,6 +76,12 @@ class RecorderController(
         /** True iff there's an active downlink/remote-side track. */
         val hasDownlink: Boolean = false,
         val totalFrames: Long = 0L,
+        /**
+         * Voice-memo session — there is no remote party at all. UI suppresses
+         * the second meter row entirely (instead of greying it out) so the
+         * user is not led to believe "the other side exists but is silent".
+         */
+        val voiceMemo: Boolean = false,
     )
 
     private val _state = MutableStateFlow<RecordingState>(RecordingState.Idle)
@@ -101,11 +107,11 @@ class RecorderController(
      * The whole flow runs on [scope] — the call site fires-and-forgets and
      * subscribes to [state] / [levels].
      */
-    fun start(callId: String) {
-        scope.launch { startInternal(callId) }
+    fun start(callId: String, voiceMemo: Boolean = false) {
+        scope.launch { startInternal(callId, voiceMemo) }
     }
 
-    private suspend fun startInternal(callId: String) {
+    private suspend fun startInternal(callId: String, voiceMemo: Boolean) {
         if (activeOutcome != null) { L.w("Recorder", "start() while already active — ignored"); return }
         val svc = client.service.value
         if (svc == null) {
@@ -114,6 +120,12 @@ class RecorderController(
             return
         }
         stopping = false
+        // Voice-memo mode is mic-only by design: no call → no remote-side
+        // audio path → dual/voicecall strategies will all fall through to
+        // SingleMic anyway, just slower and with a misleading "downlink
+        // silent" UI flash. Surface that intent to the UI immediately so the
+        // status banner hides the second meter row before levels arrive.
+        _levels.value = Levels(voiceMemo = voiceMemo)
         // Bypass health gate — refuse early on Failed (avoids cache poison),
         // proceed but don't mutate cache on Degraded, normal flow on Full.
         val bypassHealth = try {
@@ -132,6 +144,14 @@ class RecorderController(
 
         val caps = capabilities.current() ?: Capabilities(android.os.Build.FINGERPRINT, null)
         L.i("Recorder", "caps preferred=${caps.preferredStrategy?.name ?: "-"} silent=${caps.knownSilent.map { it.name }} failedInit=${caps.knownFailedInit.map { it.name }}")
+        if (voiceMemo) {
+            // No call audio path — pin to MIC and skip both the device
+            // capability cache and the silence watchdog (mic ambient is
+            // expected to be quiet at start).
+            L.i("Recorder", "voiceMemo=true → MIC-only ladder")
+            startVoiceMemo(svc, callId)
+            return
+        }
         val ladder = orderedLadder(caps).ifEmpty {
             // All strategies blacklisted — likely the cache got polluted from
             // prior attempts that failed for transient reasons (Shizuku not
@@ -231,6 +251,27 @@ class RecorderController(
             }
         }
         _state.value = RecordingState.Failed("All strategies returned silence")
+    }
+
+    private suspend fun startVoiceMemo(
+        svc: dev.lyo.callrec.aidl.IRecorderService,
+        callId: String,
+    ) {
+        _state.value = RecordingState.Probing(Strategy.SingleMic)
+        when (val result = openStrategy(svc, callId, Strategy.SingleMic)) {
+            is OpenResult.Transient -> {
+                L.w("Recorder", "voice-memo TRANSIENT: ${result.reason}")
+                _state.value = RecordingState.Failed(result.reason)
+            }
+            is OpenResult.InitFailure -> {
+                L.w("Recorder", "voice-memo INIT_FAIL: ${result.reason}")
+                _state.value = RecordingState.Failed(result.reason)
+            }
+            is OpenResult.Success -> {
+                adopt(result.outcome)
+                startWatchdog()
+            }
+        }
     }
 
     /**
@@ -343,7 +384,12 @@ class RecorderController(
 
     private fun adopt(out: Outcome) {
         activeOutcome = out
-        _levels.value = Levels(hasDownlink = out is Outcome.Dual)
+        _levels.value = _levels.value.copy(
+            uplinkRms = 0f,
+            downlinkRms = 0f,
+            hasDownlink = out is Outcome.Dual,
+            totalFrames = 0L,
+        )
         _state.value = RecordingState.Active(out)
     }
 
@@ -369,7 +415,6 @@ class RecorderController(
             val up = uplinkMeter
             val dn = downlinkMeter
             if (up == null) return Verdict.Silent // race; shouldn't happen
-            // Keep the UI fresh.
             _levels.value = _levels.value.copy(
                 uplinkRms = up.lastRms,
                 downlinkRms = dn?.lastRms ?: 0f,
@@ -394,7 +439,7 @@ class RecorderController(
             while (activeOutcome != null && !stopping) {
                 val up = uplinkMeter ?: break
                 val dn = downlinkMeter
-                _levels.value = Levels(
+                _levels.value = _levels.value.copy(
                     uplinkRms = up.lastRms,
                     downlinkRms = dn?.lastRms ?: 0f,
                     hasDownlink = dn != null,

@@ -54,7 +54,6 @@ import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -108,6 +107,7 @@ import dev.lyo.callrec.recorder.Strategy
 import dev.lyo.callrec.storage.BulkOps
 import dev.lyo.callrec.storage.CallRecord
 import dev.lyo.callrec.telephony.CallMonitorService
+import dev.lyo.callrec.telephony.CallMonitorService.Companion.MODE_VOICE_MEMO
 import dev.lyo.callrec.ui.components.LiveLevelMeter
 import dev.lyo.callrec.ui.components.QualityPill
 import kotlinx.coroutines.Dispatchers
@@ -222,43 +222,6 @@ fun PrimaryScreen(
                 .windowInsetsPadding(WindowInsets.systemBars),
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbarHost) },
-            floatingActionButton = {
-                // Expressive HorizontalFloatingToolbar — the M3 successor to
-                // a one-action ExtendedFAB when more than the canonical
-                // "primary action" needs to live in the floating layer.
-                // Wrapped in AnimatedVisibility because the toolbar's own
-                // `expanded` parameter only collapses content; the chrome
-                // itself stays on screen, which is wrong here — at idle
-                // there is no recording action to offer at all.
-                AnimatedVisibility(
-                    visible = isActiveOrProbing && !selectionUiActive,
-                    enter = scaleIn() + fadeIn(),
-                    exit = scaleOut() + fadeOut(),
-                ) {
-                    HorizontalFloatingToolbar(expanded = true) {
-                        FilledIconButton(
-                            onClick = onStopRecord,
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError,
-                            ),
-                            modifier = Modifier.size(56.dp),
-                        ) {
-                            Icon(
-                                Icons.Outlined.Stop,
-                                contentDescription = stringResource(R.string.recording_stop),
-                            )
-                        }
-                        Spacer(Modifier.size(8.dp))
-                        Text(
-                            stringResource(R.string.recording_stop),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(end = 12.dp),
-                        )
-                    }
-                }
-            },
         ) { padding ->
             Column(modifier = Modifier.padding(padding).fillMaxSize()) {
                 AnimatedContent(
@@ -307,6 +270,7 @@ fun PrimaryScreen(
                         daemonHealth = daemonHealth,
                         recState = recState,
                         levels = levels,
+                        onStopRecord = onStopRecord,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
@@ -484,6 +448,7 @@ private fun StatusBanner(
     daemonHealth: DaemonHealth,
     recState: RecorderController.RecordingState,
     levels: RecorderController.Levels,
+    onStopRecord: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val strategy = (recState as? RecorderController.RecordingState.Active)?.outcome
@@ -494,12 +459,15 @@ private fun StatusBanner(
                 is RecorderController.Outcome.Failed -> null
             }
         }
+    val isActive = recState is RecorderController.RecordingState.Active
+    val isProbing = recState is RecorderController.RecordingState.Probing
+    val showStop = isActive || isProbing
 
     val (containerColor, onColor, primaryLabel) = when {
         recState is RecorderController.RecordingState.Active -> Triple(
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
-            humanStatus(strategy),
+            humanStatus(strategy, levels.voiceMemo),
         )
         recState is RecorderController.RecordingState.Probing -> Triple(
             MaterialTheme.colorScheme.tertiaryContainer,
@@ -557,8 +525,32 @@ private fun StatusBanner(
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
-                    if (strategy != null) {
+                    if (strategy != null && !levels.voiceMemo) {
                         QualityPill(text = qualityLabel(strategy), color = onColor)
+                    }
+                }
+                // Stop control lives right inside the banner so the action is
+                // visually anchored to the "we are recording" message. The
+                // earlier bottom-right FAB was easy to miss since the user's
+                // attention is on the status banner up top.
+                AnimatedVisibility(
+                    visible = showStop,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut(),
+                ) {
+                    Spacer(Modifier.size(12.dp))
+                    FilledIconButton(
+                        onClick = onStopRecord,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        ),
+                        modifier = Modifier.size(56.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Stop,
+                            contentDescription = stringResource(R.string.recording_stop),
+                        )
                     }
                 }
             }
@@ -571,19 +563,29 @@ private fun StatusBanner(
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp)) {
                     LiveLevelMeter(
-                        label = stringResource(R.string.recording_uplink),
+                        label = stringResource(
+                            if (levels.voiceMemo) R.string.voice_memo_title
+                            else R.string.recording_uplink,
+                        ),
                         rms = levels.uplinkRms,
                         color = onColor,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.height(12.dp))
-                    LiveLevelMeter(
-                        label = stringResource(R.string.recording_downlink),
-                        rms = levels.downlinkRms,
-                        color = onColor,
-                        disabled = !levels.hasDownlink,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    // Hide the downlink row entirely for voice-memo sessions —
+                    // there is no remote party, so showing a greyed-out
+                    // "Співрозмовник" row is misleading. For real calls we
+                    // keep the disabled row to communicate "we tried but the
+                    // OEM blocks it".
+                    if (!levels.voiceMemo) {
+                        Spacer(Modifier.height(12.dp))
+                        LiveLevelMeter(
+                            label = stringResource(R.string.recording_downlink),
+                            rms = levels.downlinkRms,
+                            color = onColor,
+                            disabled = !levels.hasDownlink,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
         }
@@ -591,14 +593,17 @@ private fun StatusBanner(
 }
 
 @Composable
-private fun humanStatus(strategy: Strategy?): String = when (strategy) {
-    Strategy.DualUplinkDownlink, Strategy.DualMicDownlink ->
-        stringResource(R.string.rec_status_active_dual)
-    Strategy.SingleVoiceCallStereo, Strategy.SingleVoiceCallMono ->
-        stringResource(R.string.rec_status_active_single_full)
-    Strategy.SingleMic ->
-        stringResource(R.string.rec_status_active_mic_only)
-    null -> stringResource(R.string.rec_status_idle)
+private fun humanStatus(strategy: Strategy?, voiceMemo: Boolean): String {
+    if (voiceMemo) return stringResource(R.string.rec_status_active_voice_memo)
+    return when (strategy) {
+        Strategy.DualUplinkDownlink, Strategy.DualMicDownlink ->
+            stringResource(R.string.rec_status_active_dual)
+        Strategy.SingleVoiceCallStereo, Strategy.SingleVoiceCallMono ->
+            stringResource(R.string.rec_status_active_single_full)
+        Strategy.SingleMic ->
+            stringResource(R.string.rec_status_active_mic_only)
+        null -> stringResource(R.string.rec_status_idle)
+    }
 }
 
 @Composable
@@ -864,7 +869,7 @@ private fun RecordingRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = rec.contactName ?: rec.contactNumber ?: "—",
+                        text = displayTitle(ctx, rec),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -907,6 +912,29 @@ private fun subtitle(rec: CallRecord): String {
     val parts = mutableListOf(dur)
     rec.contactNumber?.takeIf { it.isNotBlank() && rec.contactName != null }?.let { parts.add(it) }
     return parts.joinToString("  •  ")
+}
+
+private val VOICE_MEMO_FMT =
+    DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.forLanguageTag("uk"))
+        .withZone(ZoneId.systemDefault())
+
+private fun isVoiceMemo(rec: CallRecord): Boolean = rec.mode == MODE_VOICE_MEMO
+
+private fun displayTitle(ctx: Context, rec: CallRecord): String {
+    // Prefer the AI-generated title from the transcript when present — for
+    // voice memos this turns "Голосовий запис · 28 квіт, 15:42" into
+    // something descriptive like "Список покупок і плани на вихідні".
+    // Cheap to extract: a single JSONObject parse, no full transcript load.
+    val aiTitle = dev.lyo.callrec.transcription.TranscriptCodec.extractTitle(rec.transcript)
+    if (isVoiceMemo(rec)) {
+        if (!aiTitle.isNullOrBlank()) return aiTitle
+        val stamp = VOICE_MEMO_FMT.format(Instant.ofEpochMilli(rec.startedAt))
+        return ctx.getString(R.string.voice_memo_subtitle_with_date, stamp)
+    }
+    if (rec.contactName == null && rec.contactNumber == null && !aiTitle.isNullOrBlank()) {
+        return aiTitle
+    }
+    return rec.contactName ?: rec.contactNumber ?: ctx.getString(R.string.voice_memo_title)
 }
 
 @Composable

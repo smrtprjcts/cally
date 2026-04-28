@@ -167,7 +167,7 @@ class CallMonitorService : LifecycleService() {
             L.i("Service", "kickoff: starting recorder")
             val callId = container.storage.newCallId()
             currentCallId = callId
-            container.recorder.start(callId)
+            container.recorder.start(callId, voiceMemo = manualMode)
             success = true
         } finally {
             if (!success) {
@@ -181,7 +181,14 @@ class CallMonitorService : LifecycleService() {
         val id = currentCallId ?: return
         val (mode, up, dn) = when (outcome) {
             is RecorderController.Outcome.Dual -> Triple(outcome.strategy.name, outcome.uplink.path, outcome.downlink.path)
-            is RecorderController.Outcome.Single -> Triple(outcome.strategy.name, outcome.file.path, null)
+            is RecorderController.Outcome.Single -> {
+                // Tag voice-memo sessions with a sentinel mode so the UI can
+                // render them as dictations rather than "missing-contact"
+                // calls. The strategy is always SingleMic for these — no
+                // information is lost by replacing the name.
+                val tag = if (manualMode) MODE_VOICE_MEMO else outcome.strategy.name
+                Triple(tag, outcome.file.path, null)
+            }
             is RecorderController.Outcome.Failed -> return
         }
         val started = callStartedAt ?: System.currentTimeMillis().also { callStartedAt = it }
@@ -216,6 +223,10 @@ class CallMonitorService : LifecycleService() {
         L.i("Service", "stopRecording reason=$reason")
         val id = currentCallId
         val startedAt = callStartedAt
+        // Snapshot manual-mode before any sibling intent can flip it. The
+        // post-stop bookkeeping below depends on knowing whether this was a
+        // voice-memo session (skip CallLog lookup, persist as "VoiceMemo").
+        val wasVoiceMemo = manualMode
         currentCallId = null
         callStartedAt = null
         initialNumber = null
@@ -233,7 +244,7 @@ class CallMonitorService : LifecycleService() {
         // (persistOutcomeFinal → markEnded → byId → show). lifecycleScope
         // cancels with the service; appScope outlives it.
         container.appScope.launch {
-            persistOutcomeFinal(id, outcome)
+            persistOutcomeFinal(id, outcome, wasVoiceMemo)
             container.db.calls().markEnded(id, System.currentTimeMillis())
             // Surface the saved-recording notification so the user notices
             // a recording happened even when their phone was face-down or
@@ -250,7 +261,11 @@ class CallMonitorService : LifecycleService() {
             // Post-mortem: only the system-committed CallLog row carries
             // the dialed number for outgoing calls (and for incoming on
             // Android 9+ where EXTRA_INCOMING_NUMBER is redacted).
-            runCatching {
+            //
+            // Skip entirely for voice-memo sessions: there's no call to
+            // attribute, and CallLog.mostRecentNumber would silently
+            // mis-tag an unrelated recent call onto a dictation.
+            if (!wasVoiceMemo) runCatching {
                 val existing = container.db.calls().byId(id)
                 if (existing?.contactNumber.isNullOrBlank() && startedAt != null) {
                     val num = CallLogResolver.mostRecentNumber(appCtx, startedAt)
@@ -275,12 +290,18 @@ class CallMonitorService : LifecycleService() {
      * the Active transition with the *initial* outcome — we may downgrade
      * Dual → Single (one side silent + file deleted) by the time we stop.
      */
-    private suspend fun persistOutcomeFinal(id: String, outcome: RecorderController.Outcome) {
+    private suspend fun persistOutcomeFinal(
+        id: String,
+        outcome: RecorderController.Outcome,
+        voiceMemo: Boolean,
+    ) {
         val (mode, up, dn) = when (outcome) {
             is RecorderController.Outcome.Dual ->
                 Triple(outcome.strategy.name, outcome.uplink.path, outcome.downlink.path)
-            is RecorderController.Outcome.Single ->
-                Triple(outcome.strategy.name, outcome.file.path, null)
+            is RecorderController.Outcome.Single -> {
+                val tag = if (voiceMemo) MODE_VOICE_MEMO else outcome.strategy.name
+                Triple(tag, outcome.file.path, null)
+            }
             is RecorderController.Outcome.Failed -> return
         }
         runCatching {
@@ -388,5 +409,8 @@ class CallMonitorService : LifecycleService() {
 
         const val EXTRA_PHONE_STATE = "phone_state"
         const val EXTRA_NUMBER = "number"
+
+        /** Sentinel `mode` value persisted for voice-memo (manual) sessions. */
+        const val MODE_VOICE_MEMO = "VoiceMemo"
     }
 }

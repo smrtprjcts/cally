@@ -97,7 +97,12 @@
     <string name="rec_status_active_dual">Чітко чути обох — вас і співрозмовника</string>
     <string name="rec_status_active_single_full">Чути обох в одній доріжці</string>
     <string name="rec_status_active_mic_only">Чути лише вас — пристрій блокує другу сторону</string>
+    <string name="rec_status_active_voice_memo">Запис увімкнено</string>
     <string name="rec_status_failed_silence">На цьому пристрої жодне джерело не дало звуку</string>
+
+    <!-- Voice-memo (manual recording, no call) -->
+    <string name="voice_memo_title">Голосовий запис</string>
+    <string name="voice_memo_subtitle_with_date">Голосовий запис · %1$s</string>
     <string name="rec_quality_excellent">Найкраща якість</string>
     <string name="rec_quality_good">Хороша якість</string>
     <string name="rec_quality_partial">Часткова якість</string>

@@ -182,35 +182,65 @@ private class CloudTranscriber(private val settings: AppSettings) : Transcriber 
         // Per-utterance schema. We DON'T pass a JSON schema spec — providers
         // implement it inconsistently — but we describe it precisely in the
         // prompt and let response_format=json_object enforce well-formedness.
+        //
+        // Multi-speaker diarization: model emits a `speakers` list once and
+        // segments reference it by `speaker_id`. For phone calls Gemini
+        // tends to label the ids "ME"/"THEM" cleanly when given the channel
+        // hint; for voice memos with several people present it can produce
+        // arbitrary "A"/"B"/… ids with names lifted from the conversation
+        // ("Привіт Олю!" → speaker B label "Оля").
         private val PROMPT = """
-            Транскрибуй цей запис телефонної розмови. Розпізнавай мову автоматично
-            (українська / російська / англійська / суміш — зберігай як є). Якщо
-            запис стерео: ЛІВИЙ канал переважно я (домінує там), ПРАВИЙ канал —
-            переважно співрозмовник; обидві сторони чути в обох каналах, але
-            домінуюча сторона визначає speaker. Якщо моно — використовуй
-            "unknown" для невпевнених сегментів.
+            Транскрибуй цей запис аудіо. Розпізнавай мову автоматично
+            (українська / російська / англійська / суміш — зберігай як є).
+
+            Розпізнавай ОКРЕМО кожного спікера:
+            • Якщо це телефонний дзвінок (стерео з відмінністю каналів або
+              характерне phone-line звучання): ЛІВИЙ/основний канал → id "ME",
+              label "Я"; інший → id "THEM", label "Співрозмовник" (або імʼя
+              якщо звучить у розмові).
+            • Якщо це звичайний аудіозапис з кількома голосами: створи окрему
+              запис у speakers на КОЖЕН різний голос. id — короткі ярлики
+              "A", "B", "C"… label — імʼя якщо чути ("Оля", "Микола"),
+              інакше "Спікер 1", "Спікер 2"…
+            • Тон, pitch і темп — головні ознаки розрізнення. Не плутай зміну
+              гучності або емоції одного й того ж спікера з різними людьми.
+
+            Поле "title" — короткий опис змісту запису (до 60 символів),
+            українською, без лапок і емодзі. Як назва нотатки. Приклади:
+            "Розмова з Олею про вечерю", "Список покупок і плани", "Лекція з
+            алгоритмів, кінець семестру". Якщо запис без мовлення — "Без мовлення".
 
             Поверни ВИКЛЮЧНО JSON-обʼєкт у такій формі (без markdown-fences):
             {
-              "language": "uk",                 // ISO code: uk | ru | en | mixed
-              "duration_sec": 142.5,            // приблизна тривалість запису
+              "title": "Короткий опис",
+              "language": "uk",
+              "duration_sec": 142.5,
+              "speakers": [
+                {"id": "A", "label": "Я"},
+                {"id": "B", "label": "Оля"}
+              ],
               "segments": [
                 {
-                  "start": 0.0,                 // початок у секундах від 0
-                  "end": 3.2,                   // кінець у секундах
-                  "speaker": "me",              // "me" | "them" | "unknown"
+                  "start": 0.0,
+                  "end": 3.2,
+                  "speaker_id": "A",
                   "text": "Привіт, як справи?",
-                  "tone": "friendly",           // "friendly"|"tense"|"neutral"|"excited"|"sad"|"angry"|"questioning" або null
-                  "non_speech": ["laugh"]       // ["laugh","sigh","pause","background_music","background_voice","cough"...] або []
+                  "tone": "friendly",
+                  "non_speech": ["laugh"]
                 }
               ]
             }
 
             Правила:
-            • Розбивай на репліки. Зливай короткі підряд-репліки одного спікера якщо вони на одну тему.
-            • non_speech: тільки якщо звук помітний (сміх, зітхання, кашель, музика на фоні).
-            • Не вигадуй текст — якщо нерозбірливо, постав "[нерозбірливо]" в text.
-            • Жодних коментарів, заголовків, пояснень — лише чистий JSON.
+            • title — обовʼязково, не порожній.
+            • speakers і segments узгоджені: кожен speaker_id має існувати у speakers.
+            • Розбивай на репліки. Зливай короткі підряд-репліки одного спікера
+              якщо вони на одну тему.
+            • non_speech: лише помітні звуки (laugh, sigh, cough, pause,
+              background_music, background_voice).
+            • tone: friendly|tense|neutral|excited|sad|angry|questioning або null.
+            • Не вигадуй текст — якщо нерозбірливо, постав "[нерозбірливо]".
+            • Жодних коментарів, заголовків поза JSON — тільки сам обʼєкт.
         """.trimIndent()
     }
 
