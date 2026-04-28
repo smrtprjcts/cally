@@ -5,8 +5,9 @@ import dev.lyo.callrec.aidl.IRecorderService
 
 /**
  * Single source of truth for the privileged-recorder pipeline state, observed
- * from the app process. Subsumes the legacy [ShizukuState] enum + the separate
- * `service: StateFlow<IRecorderService?>` flow into one composite signal.
+ * from the app process. Combines Shizuku availability, permission, and daemon
+ * binding into one composite signal (previously split across a coarse enum and
+ * a separate `service: StateFlow<IRecorderService?>` flow).
  *
  * Drivers (in [ShizukuClient]):
  *   - `Shizuku.pingBinder()` distinguishes [NotInstalled]/[NotRunning]

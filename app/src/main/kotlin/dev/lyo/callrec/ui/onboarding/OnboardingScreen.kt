@@ -67,7 +67,7 @@ import dev.lyo.callrec.di.AppContainer
 import dev.lyo.callrec.permissions.AppPermissions
 import dev.lyo.callrec.permissions.BatteryOptimizations
 import dev.lyo.callrec.permissions.rememberPermissionsState
-import dev.lyo.callrec.recorder.ShizukuState
+import dev.lyo.callrec.recorder.DaemonHealth
 import kotlinx.coroutines.launch
 
 /**
@@ -87,16 +87,15 @@ fun OnboardingScreen(
     onDone: () -> Unit,
 ) {
     val ctx = LocalContext.current
-    val state by container.shizuku.state.collectAsState()
+    val state by container.shizuku.health.collectAsState()
     val scope = rememberCoroutineScope()
     val (perms, requestPerms) = rememberPermissionsState()
     val grantedSet by perms.granted.collectAsState()
     val allRuntimeGranted = grantedSet.containsAll(AppPermissions.essential)
 
-    val shizukuInstalled = state != ShizukuState.NotRunning ||
-        runCatching { ctx.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0) }.isSuccess
-    val shizukuActivated = state != ShizukuState.NotRunning && state != ShizukuState.Outdated
-    val shizukuPermitted = state == ShizukuState.Ready
+    val shizukuInstalled = state !is DaemonHealth.NotInstalled
+    val shizukuActivated = state !is DaemonHealth.NotInstalled && state !is DaemonHealth.NotRunning
+    val shizukuPermitted = state is DaemonHealth.Bound
 
     // canDrawOverlays / battery have no change broadcast — re-read on every
     // RESUME instead of an 800 ms infinite poll. The system Settings page is
@@ -228,7 +227,7 @@ fun OnboardingScreen(
             }
 
             AnimatedVisibility(
-                visible = state == ShizukuState.Denied,
+                visible = state is DaemonHealth.NoPermission,
                 enter = fadeIn(spring(stiffness = 200f)),
                 exit = fadeOut(tween(150)),
             ) {

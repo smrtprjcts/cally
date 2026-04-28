@@ -103,7 +103,7 @@ import dev.lyo.callrec.R
 import dev.lyo.callrec.contacts.ContactResolver
 import dev.lyo.callrec.di.AppContainer
 import dev.lyo.callrec.recorder.RecorderController
-import dev.lyo.callrec.recorder.ShizukuState
+import dev.lyo.callrec.recorder.DaemonHealth
 import dev.lyo.callrec.recorder.Strategy
 import dev.lyo.callrec.storage.BulkOps
 import dev.lyo.callrec.storage.CallRecord
@@ -141,7 +141,7 @@ import kotlin.math.absoluteValue
 @Composable
 fun PrimaryScreen(
     container: AppContainer,
-    shizukuState: ShizukuState,
+    daemonHealth: DaemonHealth,
     onOpenSettings: () -> Unit,
     onOpenPlayback: (String) -> Unit,
 ) {
@@ -297,14 +297,14 @@ fun PrimaryScreen(
                 }
 
                 val bannerVisible = recState !is RecorderController.RecordingState.Idle ||
-                    shizukuState != ShizukuState.Ready
+                    daemonHealth !is DaemonHealth.Bound
                 AnimatedVisibility(
                     visible = bannerVisible && !selectionUiActive,
                     enter = fadeIn(tween(220)),
                     exit = fadeOut(tween(160)),
                 ) {
                     StatusBanner(
-                        shizukuState = shizukuState,
+                        daemonHealth = daemonHealth,
                         recState = recState,
                         levels = levels,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -481,7 +481,7 @@ private fun SelectionTopBar(
 
 @Composable
 private fun StatusBanner(
-    shizukuState: ShizukuState,
+    daemonHealth: DaemonHealth,
     recState: RecorderController.RecordingState,
     levels: RecorderController.Levels,
     modifier: Modifier = Modifier,
@@ -511,7 +511,7 @@ private fun StatusBanner(
             MaterialTheme.colorScheme.onErrorContainer,
             stringResource(R.string.rec_status_failed_silence),
         )
-        shizukuState != ShizukuState.Ready -> Triple(
+        daemonHealth !is DaemonHealth.Bound -> Triple(
             MaterialTheme.colorScheme.surfaceContainerHigh,
             MaterialTheme.colorScheme.onSurfaceVariant,
             stringResource(R.string.home_status_no_shizuku),

@@ -59,7 +59,7 @@ fun CallrecApp(
         val id = initialPlaybackCallId ?: return@LaunchedEffect
         nav.navigate(Routes.playback(id)) { launchSingleTop = true }
     }
-    val shizukuState by container.shizuku.state.collectAsStateWithLifecycle()
+    val daemonHealth by container.shizuku.health.collectAsStateWithLifecycle()
     val start = if (startWithOnboarding) Routes.Onboarding else Routes.Home
 
     // First-run legal placeholder. We default to `true` to avoid a flash of
@@ -125,7 +125,7 @@ fun CallrecApp(
         composable(Routes.Home) {
             PrimaryScreen(
                 container = container,
-                shizukuState = shizukuState,
+                daemonHealth = daemonHealth,
                 onOpenSettings = { nav.navigate(Routes.Settings) },
                 onOpenPlayback = { id -> nav.navigate(Routes.playback(id)) },
             )
