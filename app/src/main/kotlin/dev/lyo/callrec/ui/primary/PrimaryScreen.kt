@@ -40,7 +40,6 @@ import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.outlined.FiberManualRecord
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.Phone
@@ -94,7 +93,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -888,7 +886,7 @@ private fun RecordingRow(
                 }
                 Spacer(Modifier.size(2.dp))
                 Text(
-                    text = subtitle(rec),
+                    text = subtitle(ctx, rec),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -905,10 +903,13 @@ private fun RecordingRow(
     }
 }
 
-private fun subtitle(rec: CallRecord): String {
+private fun subtitle(ctx: Context, rec: CallRecord): String {
     val durMs = (rec.endedAt ?: rec.startedAt) - rec.startedAt
     val secs = (durMs / 1000).coerceAtLeast(0)
-    val dur = if (secs >= 60) "%d:%02d".format(secs / 60, secs % 60) else "${secs}с"
+    val dur = if (secs >= 60)
+        "%d:%02d".format(secs / 60, secs % 60)
+    else
+        "$secs${ctx.getString(R.string.second)}"
     val parts = mutableListOf(dur)
     rec.contactNumber?.takeIf { it.isNotBlank() && rec.contactName != null }?.let { parts.add(it) }
     return parts.joinToString("  •  ")

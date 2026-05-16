@@ -1,5 +1,200 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_tagline">Запис дзвінків без компромісів</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Запис дзвінків через Shizuku</string>
+    <string name="onboarding_step_install">Встанови Shizuku</string>
+    <string name="onboarding_step_install_desc">Безкоштовний інструмент, який дає привілейований доступ без root.</string>
+    <string name="onboarding_step_activate">Активуй Shizuku</string>
+    <string name="onboarding_step_activate_desc">Через Wireless Debugging — без USB-кабеля.</string>
+    <string name="onboarding_step_grant">Дозволь додатку</string>
+    <string name="onboarding_step_grant_desc">Один раз — не питатимемо повторно.</string>
+    <string name="onboarding_continue">Продовжити</string>
+    <string name="onboarding_open_shizuku">Відкрити Shizuku</string>
+    <string name="onboarding_shizuku_check">Перевірити статус</string>
+
+    <!-- Primary screen -->
+    <string name="home_status_no_shizuku">Shizuku не активний</string>
+    <string name="home_recordings_empty">Поки що немає записів</string>
+    <string name="home_action_settings">Налаштування</string>
+    <string name="primary_search_placeholder">Пошук за іменем чи номером</string>
+    <string name="primary_select">Вибрати</string>
+    <string name="primary_selection_count">%1$d вибрано</string>
+    <string name="primary_filter_all">Усі</string>
+    <string name="primary_filter_today">Сьогодні</string>
+    <string name="primary_filter_week">Цей тиждень</string>
+    <string name="primary_filter_favorites">Обрані</string>
+    <string name="primary_fab_record">Запис</string>
+    <string name="primary_empty_hint">Дзвінки запишуться автоматично. Або тапни мікрофон угорі — почати вручну.</string>
+    <string name="primary_empty_search">Нічого не знайдено для «%1$s»</string>
+    <string name="primary_empty_filter_title">У цій вибірці порожньо</string>
+    <string name="primary_empty_filter_hint">Спробуй інший фільтр або скинь пошук.</string>
+    <string name="primary_bucket_today">Сьогодні</string>
+    <string name="primary_bucket_yesterday">Вчора</string>
+    <string name="primary_bucket_week">Цей тиждень</string>
+    <string name="primary_bucket_month">Цей місяць</string>
+    <string name="second">c</string>
+
+    <!-- Recording -->
+    <string name="recording_uplink">Ваш голос</string>
+    <string name="recording_downlink">Співрозмовник</string>
+    <string name="recording_stop">Зупинити</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_recording">Активний запис</string>
+    <string name="notif_channel_recording_desc">Постійне сповіщення під час запису дзвінка.</string>
+    <string name="notif_channel_status">Статус Shizuku</string>
+    <string name="notif_channel_status_desc">Сповіщення про проблеми з підключенням.</string>
+    <string name="notif_recording_title">Йде запис дзвінка</string>
+    <string name="notif_recording_text_dual">Дві доріжки: ваш голос + співрозмовник</string>
+    <string name="notif_recording_text_single">Одна доріжка</string>
+    <string name="notif_recording_action_stop">Зупинити</string>
+
+    <string name="notif_channel_completed">Завершені записи</string>
+    <string name="notif_channel_completed_desc">Сповіщення з посиланням на щойно записаний дзвінок.</string>
+    <string name="notif_completed_title">Дзвінок записано</string>
+    <string name="notif_completed_text_with_contact">%1$s · %2$s</string>
+    <string name="notif_completed_text_anonymous">Тривалість %1$s · тапни щоб відкрити</string>
+
+    <string name="notif_channel_playback">Плеєр</string>
+    <string name="notif_channel_playback_desc">Керування відтворенням записів зі шторки і екрана блокування.</string>
+
+    <!-- Recording row actions (shared by primary screen) -->
+    <string name="library_share">Поділитись</string>
+    <string name="library_delete">Видалити</string>
+    <string name="library_deleted">Запис видалено</string>
+    <string name="library_delete_bulk_msg">Видалити %1$d запис(ів)? Файли буде видалено остаточно.</string>
+
+    <!-- Playback -->
+    <string name="playback_play">Відтворити</string>
+    <string name="playback_pause">Пауза</string>
+    <string name="playback_skip_back">Назад 10 с</string>
+    <string name="playback_skip_forward">Вперед 10 с</string>
+    <string name="playback_speed_label">Швидкість</string>
+    <string name="playback_share">Поділитись</string>
+    <string name="playback_share_title">Як поділитись?</string>
+    <string name="playback_share_subtitle">Стерео — один файл, у якому ваш голос ліворуч, співрозмовник праворуч. Окремо — дві mono-доріжки.</string>
+    <string name="playback_share_stereo">Стерео (1 файл)</string>
+    <string name="playback_share_separate">Окремо (2 файли)</string>
+    <string name="playback_share_preparing">Готую стерео…</string>
+    <string name="playback_delete">Видалити</string>
+    <string name="playback_delete_title">Видалити запис?</string>
+    <string name="playback_delete_message">Файл і запис у бібліотеці буде видалено остаточно.</string>
+    <string name="playback_delete_confirm">Видалити</string>
+    <string name="playback_delete_cancel">Скасувати</string>
+    <string name="playback_back">Назад</string>
+    <string name="playback_meta_dual">Дві доріжки</string>
+    <string name="playback_meta_single">Одна доріжка</string>
+    <string name="playback_notes_placeholder">Нотатки…</string>
+    <string name="playback_favorite_on">Прибрати з обраного</string>
+    <string name="playback_favorite_off">Додати в обране</string>
+    <string name="playback_transcribe">Розпізнати мову</string>
+    <string name="playback_transcribe_running">Надсилаємо аудіо в хмару…</string>
+
+    <!-- Smart-status messages — human language, no jargon. -->
+    <string name="rec_status_idle">Готово до запису</string>
+    <string name="rec_status_probing">Налаштовуємо запис під ваш пристрій…</string>
+    <string name="rec_status_active_dual">Чітко чути обох — вас і співрозмовника</string>
+    <string name="rec_status_active_single_full">Чути обох в одній доріжці</string>
+    <string name="rec_status_active_mic_only">Чути лише вас — пристрій блокує другу сторону</string>
+    <string name="rec_status_active_voice_memo">Запис увімкнено</string>
+    <string name="rec_status_failed_silence">На цьому пристрої жодне джерело не дало звуку</string>
+
+    <!-- Voice-memo (manual recording, no call) -->
+    <string name="voice_memo_title">Голосовий запис</string>
+    <string name="voice_memo_subtitle_with_date">Голосовий запис · %1$s</string>
+    <string name="rec_quality_excellent">Найкраща якість</string>
+    <string name="rec_quality_good">Хороша якість</string>
+    <string name="rec_quality_partial">Часткова якість</string>
+
+    <!-- Accessibility — required for reliable background FG service start -->
+    <string name="accessibility_service_summary">Дозволяє автоматичний запис дзвінків</string>
+    <string name="accessibility_service_description">cally використовує службу спеціальних можливостей для надійного автоматичного старту запису, коли надходить дзвінок. Жодних подій не зчитуємо — служба потрібна лише для дозволу запускати запис у фоні.</string>
+
+    <!-- Onboarding step 5 (overlay permission for FGS-from-background) -->
+    <string name="onboarding_step_overlay">Поверх інших додатків</string>
+    <string name="onboarding_step_overlay_desc">Дозвіл малювати поверх — потрібен для автозапису з фону. Ми додаємо невидимий 1×1 px шар на ~3 секунди, щоб Android дозволив стартувати запис під час дзвінка.</string>
+    <string name="onboarding_step_overlay_action">Дозволити</string>
+
+    <!-- Onboarding step 6 (battery exemption) -->
+    <string name="onboarding_step_battery">Без сну</string>
+    <string name="onboarding_step_battery_desc">Samsung та Pixel заморожують додатки, коли вони не на екрані. Без цього дозволу cally не зможе ввімкнутися сама, щоб записати дзвінок.</string>
+    <string name="onboarding_step_battery_action">Дозволити</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Налаштування</string>
+    <string name="settings_section_recording">Запис</string>
+    <string name="settings_auto_record">Авто-запис дзвінків</string>
+    <string name="settings_auto_record_desc">Починати запис автоматично, коли йде дзвінок.</string>
+    <string name="settings_ringback">Записувати з самого набору</string>
+    <string name="settings_ringback_desc">Запис включає гудки виклику. Якщо вимкнено — старт лише після відповіді.</string>
+    <string name="settings_sample_rate">Якість запису</string>
+    <string name="settings_sample_rate_desc">16 кГц — оптимально для голосу. 48 кГц — макс. якість, у 3 рази більший файл.</string>
+    <string name="settings_format">Формат запису</string>
+    <string name="settings_format_desc">AAC — у ~5 разів менший файл. WAV — без втрат якості.</string>
+    <string name="settings_format_wav">WAV (без втрат)</string>
+    <string name="settings_format_aac">AAC (≈5× менше)</string>
+    <string name="settings_section_calibration">Калібрування пристрою</string>
+    <string name="settings_calibration_status">Поточний робочий метод</string>
+    <string name="settings_calibration_unknown">Ще не калібровано — спрацює при першому дзвінку</string>
+    <string name="settings_calibration_reset">Перекалібрувати</string>
+    <string name="settings_calibration_reset_desc">Стерти кеш — додаток знову пройде по всіх методах при наступному дзвінку.</string>
+    <string name="settings_section_about">Про додаток</string>
+    <string name="settings_version">Версія</string>
+    <string name="settings_storage_path">Папка записів</string>
+    <string name="settings_legal_title">Юридичне попередження</string>
+    <string name="settings_legal_subtitle">Огляд правил для запису розмов</string>
+    <string name="settings_format_frequency">%1$d кГц</string>
+
+    <!-- Legal disclaimer (first-run sheet + Settings re-read) -->
+    <string name="legal_title">Перш ніж записувати</string>
+    <string name="legal_intro">Юрисдикції розкладаються на три рівні. Знайди свою — і дій відповідно. Це не юридична консультація.</string>
+
+    <string name="legal_tier1_title">1. Без сповіщення (one-party consent)</string>
+    <string name="legal_tier1_summary">Україна, UK, federal США + ~38 штатів, Канада, Австралія, Польща.</string>
+    <string name="legal_tier1_body">Учасник розмови може записувати без попередження співрозмовника. Власна згода = достатня згода. Підстави: federal Wiretap Act 18 U.S.C. § 2511 у США, RIPA 2000 у UK, Criminal Code § 184(2)(a) у Канаді.</string>
+
+    <string name="legal_tier2_title">2. Достатньо попередити (all-party + implied consent)</string>
+    <string name="legal_tier2_summary">~11 штатів США: Каліфорнія, Іллінойс, Флорида, Меріленд та інші.</string>
+    <string name="legal_tier2_body">Повний список: CA (Penal Code § 632), FL, IL, MD, MA, MT, NV, NH, PA, WA, CT. Сповісти співрозмовника на старті розмови — якщо він почув і продовжив, це implied consent, запис легальний. Доктрина закріплена прецедентним правом за десятки років. Той самий механізм у комерційних hotline-disclaimer\'ах EU.</string>
+
+    <string name="legal_tier3_title">3. Заборонено навіть з попередженням (explicit consent)</string>
+    <string name="legal_tier3_summary">Німеччина, Австрія, Бельгія. Потрібна явна згода — попередження юридично недостатньо.</string>
+    <string name="legal_tier3_body">Німеччина — § 201 StGB Vertraulichkeit des Wortes, до 3 років в\'язниці за запис «непублічно мовленого слова» без явного дозволу. Implied consent у приватних розмовах німецькі суди не визнають. Австрія — § 120 StGB. Бельгія — кримінальне право + електронні комунікації, у багатьох випадках письмова згода. Не використовуй cally в цих юрисдикціях без явного «так, згоден» від співрозмовника.</string>
+
+    <string name="legal_tech_title">cally і beep співрозмовнику</string>
+    <string name="legal_tech_body">Технічно не можемо програти beep чи announcement у вухо співрозмовнику — це системна привілея Pixel Phone, недоступна third-party додаткам. Усне попередження на старті розмови працює у режимі 2 (implied consent). У режимі 3 і його недостатньо — потрібна явна згода.</string>
+
+    <string name="legal_share">Запис ≠ розповсюдження. За публікацію без згоди співрозмовника відповідає користувач — навіть у one-party юрисдикціях.</string>
+    <string name="legal_footer">Деталі та джерела — у README проєкту.</string>
+    <string name="legal_action_accept">Зрозуміло, продовжити</string>
+    <string name="legal_action_close">Закрити</string>
+    <string name="settings_calibration_done">Скинуто. Наступний дзвінок проведе нове калібрування.</string>
+
+    <!-- Settings: Cloud STT (transcription) -->
+    <string name="settings_section_transcribe">Транскрипція</string>
+    <string name="settings_transcribe_desc">Розпізнавання мови через будь-який OpenAI-сумісний API. Аудіо надсилається у вибраний вами сервіс. Підходять OpenRouter, OpenAI, Groq, локальний LM Studio.</string>
+    <string name="settings_transcribe_base_url">Base URL</string>
+    <string name="settings_transcribe_api_key">API ключ</string>
+    <string name="settings_transcribe_model">Модель</string>
+
+    <!-- Settings: Auto-cleanup -->
+    <string name="settings_section_cleanup">Авто-очищення</string>
+    <string name="settings_cleanup_age_title">Зберігати за віком</string>
+    <string name="settings_cleanup_age_desc">Видаляти записи, старші за вибраний термін. Очищення відбувається при запуску додатка. Обране не видаляється, навіть якщо перевищує ліміт.</string>
+    <string name="settings_cleanup_size_title">Ліміт сховища</string>
+    <string name="settings_cleanup_size_desc">Коли загальний обсяг записів перевищить ліміт — найстаріші видаляються. Обране не видаляється, навіть якщо перевищує ліміт.</string>
+    <string name="settings_cleanup_off">Не очищати</string>
+    <string name="settings_cleanup_label_keep">Зберігати:</string>
+    <string name="settings_cleanup_days_short">%1$d дн</string>
+    <string name="settings_cleanup_year_short">1 рік</string>
+    <string name="settings_cleanup_gb_short">%1$d ГБ</string>
+    <string name="settings_cleanup_applied">При запуску старі записи будуть видалені автоматично</string>
+
+    <!-- Errors -->
+    <string name="err_shizuku_denied">Дозвіл відхилено — відкрий Shizuku та надай дозвіл вручну.</string>
+
     <!-- Daemon health notifications -->
     <string name="daemon_notinstalled_title">cally: Shizuku не встановлено</string>
     <string name="daemon_notinstalled_body">Натисніть, щоб налаштувати</string>
@@ -14,12 +209,18 @@
     <string name="overlay_perm_missing_title">cally: потрібен дозвіл накладання</string>
     <string name="overlay_perm_missing_body">Без нього неможливо записувати на Android 14+</string>
 
-    <!-- Onboarding tip -->
+    <!-- Onboarding tip (used by Task 18) -->
     <string name="onboarding_shizuku_tip_title">Для кращої надійності</string>
     <string name="onboarding_shizuku_tip_body">Розгляньте community-збірки Shizuku з автоперезапуском і збереженим ADB-pairing\'ом.</string>
     <string name="onboarding_shizuku_tip_cta">Докладніше</string>
 
-    <!-- POST_NOTIFICATIONS rationale -->
+    <!-- POST_NOTIFICATIONS rationale (used by Task 18) -->
     <string name="onboarding_notif_perm_title">Дозволити сповіщення</string>
     <string name="onboarding_notif_perm_body">Потрібно, щоб попередити, якщо Shizuku перестав працювати.</string>
+
+    <!-- Runtime permissions: RECORD_AUDIO, POST_NOTIFICATIONS, READ_PHONE_STATE, READ_CALL_LOG, READ_CONTACTS, -->
+    <string name="onboarding_step_runtime_perms">Дозволи системи</string>
+    <string name="onboarding_step_runtime_perms_desc">Мікрофон, сповіщення, статус телефону, журнал дзвінків, контакти — щоб запис стартував і поряд із записом було видно, з ким говорили.</string>
+    <string name="onboarding_step_runtime_perms_action">Дозволити</string>
+
 </resources>

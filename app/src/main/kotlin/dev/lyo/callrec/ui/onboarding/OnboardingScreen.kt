@@ -14,7 +14,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,7 +41,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -163,7 +161,7 @@ fun OnboardingScreen(
                 action = if (!shizukuInstalled) {
                     { openShizukuStorePage(ctx) }
                 } else null,
-                actionLabel = stringResource(R.string.onboarding_open_shizuku),
+                actionLabel = stringResource(R.string.onboarding_shizuku_check),
             )
             StepCard(
                 index = 2,
@@ -211,11 +209,11 @@ fun OnboardingScreen(
             StepCard(
                 index = stepIdx++,
                 icon = Icons.Outlined.LockOpen,
-                title = "Дозволи системи",
-                desc = "Мікрофон, сповіщення, статус телефону, журнал дзвінків, контакти — щоб запис стартував і поряд із записом було видно, з ким говорили.",
+                title = stringResource(R.string.onboarding_step_runtime_perms),
+                desc = stringResource(R.string.onboarding_step_runtime_perms_desc),
                 done = allRuntimeGranted,
                 action = if (!allRuntimeGranted) requestPerms else null,
-                actionLabel = "Дозволити",
+                actionLabel = stringResource(R.string.onboarding_step_runtime_perms_action),
             )
             StepCard(
                 index = stepIdx++,
@@ -278,7 +276,7 @@ fun OnboardingScreen(
             ) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
-                Text("Перевірити статус")
+                Text(stringResource(R.string.onboarding_shizuku_check))
             }
 
             AnimatedVisibility(
@@ -287,8 +285,7 @@ fun OnboardingScreen(
                 exit = fadeOut(tween(150)),
             ) {
                 Text(
-                    text = stringResource(R.string.err_shizuku_denied) +
-                        " — відкрий Shizuku та надай дозвіл вручну.",
+                    text = stringResource(R.string.err_shizuku_denied),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )

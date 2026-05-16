@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -395,7 +394,7 @@ private fun SampleRateRow(
                     onCheckedChange = { onSelect(rate) },
                     shapes = ToggleButtonDefaults.shapes(),
                     modifier = Modifier.weight(1f),
-                ) { Text("${rate / 1000} кГц") }
+                ) { Text(stringResource(R.string.settings_format_frequency, rate / 1000)) }
             }
         }
     }
